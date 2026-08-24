@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Raw datasets
+data/raw/
+
+# Models
+models/
+
+# Environment/API secrets
+.env
+
+# Jupyter
+.ipynb_checkpoints/
