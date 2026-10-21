@@ -69,7 +69,7 @@ def create_pure_eda_notebook():
             "df = pd.DataFrame(records)\n"
             "print(f'Total candidate requirements: {len(df):,}')\n"
             "print(f'Unique documents: {df[\"doc_id\"].nunique()}')\n"
-            "df.head()"
+            "df[['req_id', 'doc_id', 'token_count', 'source_file']].head()"
         ),
         make_markdown_cell("## 2. Requirements per Document Breakdown"),
         make_code_cell(
@@ -99,12 +99,10 @@ def create_pure_eda_notebook():
             "filter_stats = json.loads(stats_path.read_text(encoding='utf-8'))\n"
             "pd.DataFrame(list(filter_stats['summary'].items()), columns=['Metric', 'Value'])"
         ),
-        make_markdown_cell("## 6. Twenty Random Requirement Samples (Seed 42)"),
+        make_markdown_cell("## 6. Twenty Random Requirement Metadata Samples (Seed 42)"),
         make_code_cell(
-            "sample_20 = df.sample(n=20, random_state=42)[['req_id', 'doc_id', 'token_count', 'text']]\n"
-            "for idx, row in sample_20.reset_index(drop=True).iterrows():\n"
-            "    print(f'[{idx+1:02d}] {row[\"req_id\"]} ({row[\"token_count\"]} tokens):')\n"
-            "    print(f'     \"{row[\"text\"]}\"\\n')"
+            "sample_20 = df.sample(n=20, random_state=42)[['req_id', 'doc_id', 'token_count', 'source_file']].reset_index(drop=True)\n"
+            "sample_20"
         ),
     ]
     nb = make_notebook(cells)
@@ -140,14 +138,20 @@ def create_arta_eda_notebook():
             "    smell_freq[col] = present.sum()\n"
             "pd.DataFrame(list(smell_freq.items()), columns=['Smell Type', 'Count in DS1']).sort_values('Count in DS1', ascending=False)"
         ),
-        make_markdown_cell("## 3. Sample 20 Rows from DS1 (Seed 42)"),
+        make_markdown_cell("## 3. Sample 20 Rows from DS1 (Seed 42) - Metadata Only"),
         make_code_cell(
             "sample_20 = ds1.sample(n=20, random_state=42)\n"
+            "records = []\n"
             "for i, row in sample_20.reset_index(drop=True).iterrows():\n"
             "    active_smells = [c for c in smell_cols if str(row[c]).strip() not in ('-', 'nan')]\n"
-            "    print(f'[{i+1:02d}] File: {row[\"File\"]}')\n"
-            "    print(f'     Text: {str(row[\"Requirement_text\"]).strip()[:100]}...')\n"
-            "    print(f'     Smells: {active_smells}\\n')"
+            "    records.append({\n"
+            "        'Sample': i + 1,\n"
+            "        'File': row['File'],\n"
+            "        'Char_Length': len(str(row['Requirement_text'])),\n"
+            "        'Active_Smells_Count': len(active_smells),\n"
+            "        'Smell_Types': ', '.join(active_smells) if active_smells else 'None'\n"
+            "    })\n"
+            "pd.DataFrame(records)"
         ),
     ]
     nb = make_notebook(cells)
@@ -170,7 +174,7 @@ def create_qure_eda_notebook():
             "df = pd.read_csv(qure_path)\n"
             "print(f'Total requirements: {len(df):,}')\n"
             "print(f'Columns: {list(df.columns)}')\n"
-            "df.head()"
+            "df[['id', 'defect', 'weak_word']].head()"
         ),
         make_markdown_cell("## 2. Defect vs OK Label Distribution"),
         make_code_cell(
@@ -182,12 +186,10 @@ def create_qure_eda_notebook():
             "weak_words = df['weak_word'].value_counts().head(15)\n"
             "pd.DataFrame({'Count': weak_words, 'Percentage': (weak_words / len(df) * 100).round(2)})"
         ),
-        make_markdown_cell("## 4. 20 Random Samples (Seed 42)"),
+        make_markdown_cell("## 4. 20 Random Samples (Seed 42) - Metadata Only"),
         make_code_cell(
-            "sample_20 = df.sample(n=20, random_state=42)\n"
-            "for i, row in sample_20.reset_index(drop=True).iterrows():\n"
-            "    print(f'[{i+1:02d}] ID: {row[\"id\"]} | Weak Word: \"{row[\"weak_word\"]}\" | Defect: {row[\"defect\"]}')\n"
-            "    print(f'     \"{row[\"requirement\"]}\"\\n')"
+            "sample_20 = df.sample(n=20, random_state=42)[['id', 'weak_word', 'defect']].reset_index(drop=True)\n"
+            "sample_20"
         ),
     ]
     nb = make_notebook(cells)
