@@ -1,0 +1,50 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "CheckSense: CLI Help",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "checksense.cli",
+            "args": ["--help"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "CheckSense: CLI Download (PURE)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "checksense.cli",
+            "args": ["download", "--dataset", "pure"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "CheckSense: Streamlit Analysis App",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "streamlit",
+            "args": ["run", "app/streamlit_app.py", "--server.port", "8501"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "CheckSense: Streamlit Annotation App",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "streamlit",
+            "args": ["run", "app/annotate.py", "--server.port", "8502"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "CheckSense: Run Pytest",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["tests", "-v"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}

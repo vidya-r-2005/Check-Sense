@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "checksense"
+version = "0.1.0"
+description = "NLP system for detecting ambiguous, incomplete, and implicit gaps in software requirements"
+readme = "README.md"
+authors = [
+    { name = "CheckSense Team" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "spacy>=3.7.0,<4.0.0",
+    "transformers>=4.40.0,<5.0.0",
+    "torch>=2.2.0",
+    "scikit-learn>=1.4.0,<2.0.0",
+    "scipy>=1.12.0",
+    "numpy>=1.26.0,<2.0.0",
+    "pandas>=2.2.0,<3.0.0",
+    "streamlit>=1.33.0",
+    "requests>=2.31.0",
+    "tqdm>=4.66.0",
+    "pydantic>=2.6.0",
+    "openpyxl>=3.1.2",
+    "rich>=13.7.0",
+    "pytest>=8.1.0",
+    "ruff>=0.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.4.0",
+    "ipykernel>=6.29.0",
+]
+
+[project.scripts]
+checksense = "checksense.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C4",  # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+]
