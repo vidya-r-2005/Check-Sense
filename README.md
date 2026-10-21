@@ -24,10 +24,10 @@ In accordance with Section 0.6 of `MASTER_SPEC.md`, module statuses are honestly
 | Module / Component | Stage | Status | Notes |
 |---|---|---|---|
 | Repository & Environment Skeleton | Phase 0 | **working** | Windows & POSIX compatible, CLI skeleton, test harness |
-| CLI Interface (`checksense.cli`) | Phase 0 | **working** | All 12 subcommands parsed and tested |
+| CLI Interface (`checksense.cli`) | Phase 0 | **working** | All 12 subcommands parsed and tested; download/build-corpus functional |
 | Environment Check Script | Phase 0 | **working** | `scripts/check_env.py` validates workspace and runtimes |
-| Dataset Acquisition & Verification | Phase 1 | `todo` | PURE, ARTA, QuRE acquisition pipeline |
-| Interim PURE Corpus Builder | Phase 1 | `todo` | XML/PDF parser with exact removal stats |
+| Dataset Acquisition & Verification | Phase 1 | **working** | PURE, ARTA, QuRE acquired and MD5-verified from Zenodo; logged in MANIFEST |
+| Interim PURE Corpus Builder | Phase 1 | **working** | 2,928 candidate requirements extracted from 18 real XML specs with audit stats |
 | Dependency Parser & Frame Extraction | Phase 2 | `todo` | spaCy requirement frame parser (actor, modal, action, object, etc.) |
 | Baseline Rule Detector (B1) | Phase 2 | `todo` | Lexicon & frame-slot heuristics |
 | Evaluation Module (Label-Status Gated) | Phase 2 | `todo` | Refuses non-verified labels |

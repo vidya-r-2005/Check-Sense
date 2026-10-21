@@ -350,17 +350,44 @@ def create_parser() -> argparse.ArgumentParser:
 
 # Command handlers (skeletons with status logging)
 def _cmd_download(args: argparse.Namespace) -> int:
+    from .acquisition import DATASET_CONFIGS, acquire_dataset
+
     print(f"[CheckSense CLI] 'download' subcommand invoked for dataset={args.dataset}")
     print(f"Destination: {args.output_dir.resolve()}")
-    print("Status: Implementation is scheduled in Phase 1.")
+
+    targets = list(DATASET_CONFIGS.keys()) if args.dataset == "all" else [args.dataset]
+    for target in targets:
+        if target not in DATASET_CONFIGS:
+            print(f"[-] Dataset '{target}' is not an auto-download target. Check HUMAN_TODO.md.")
+            continue
+        try:
+            acquire_dataset(
+                dataset_key=target,
+                output_base_dir=args.output_dir,
+                skip_checksum=args.skip_checksum,
+            )
+        except Exception as e:
+            print(f"[-] ERROR acquiring {target}: {e}")
+            return 1
     return 0
 
 
 def _cmd_build_corpus(args: argparse.Namespace) -> int:
+    from .corpus import build_pure_corpus
+
     print("[CheckSense CLI] 'build-corpus' subcommand invoked.")
     print(f"Input: {args.input_dir.resolve()} -> Output: {args.output_file.resolve()}")
-    print("Status: Implementation is scheduled in Phase 1.")
-    return 0
+    try:
+        build_pure_corpus(
+            input_dir=args.input_dir,
+            output_file=args.output_file,
+            min_tokens=args.min_tokens,
+            max_tokens=args.max_tokens,
+        )
+        return 0
+    except Exception as e:
+        print(f"[-] ERROR building corpus: {e}")
+        return 1
 
 
 def _cmd_sample(args: argparse.Namespace) -> int:
