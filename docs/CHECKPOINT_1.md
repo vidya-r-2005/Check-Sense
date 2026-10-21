@@ -207,6 +207,23 @@ CheckSense Environment & Workspace Verification
 ```
 **Exit Code:** `0`.
 
+### D. Git Repository & Remote Synchronization Status
+- **Local Branch:** `main`
+- **Remote Repository:** `https://github.com/vidya-r-2005/Check-Sense.git`
+- **Remote Tracking Branch:** `origin/main`
+- **Push Status:** **SYNCHRONIZED (Up-to-date with `origin/main`)**
+- **Recent Commit Chain:**
+  - `cd29d5f`: `feat(phase-0): initialize repo, environment, cli skeleton, vscode config, test harness, and checkpoint 0`
+  - `e20234e`: `feat(phase-1): acquire and verify datasets, build PURE corpus, eda notebooks, and checkpoint 1`
+  - `c5c3639`: `docs(phase-1): synchronize per-document counts, QuRE row counts, and verification evidence`
+  - `789d734`: `merge: safely reconcile remote origin/main into CheckSense`
+- **Protection of Excluded Artifacts:**
+  - `data/raw/*` (raw downloads): Ignored by `.gitignore` (only `data/raw/.gitkeep` tracked).
+  - `models/*`: Ignored by `.gitignore` (only `models/.gitkeep` tracked).
+  - `.env`: Ignored by `.gitignore`.
+  - `.venv/`: Ignored by `.gitignore`.
+- **Tracked Reproducibility Assets:** Code (`src/checksense/`), tests (`tests/`), EDA notebooks (`notebooks/01_pure_eda.ipynb`, `notebooks/02_arta_eda.ipynb`, `notebooks/03_qure_eda.ipynb`), interim data & stats (`data/interim/pure_filtering_stats.json`, `data/interim/pure_requirements.jsonl`), dataset manifest (`data/MANIFEST.md`), and documentation (`docs/`).
+
 ---
 
 ## 3. Summary of Discrepancies Resolved & Remaining Blockers
