@@ -222,6 +222,8 @@ CheckSense Environment & Workspace Verification
   - `789d734`: `merge: safely reconcile remote origin/main into CheckSense`
   - `3a86b31`: `docs(phase-1): document remote GitHub synchronization in Checkpoint 1`
   - `181d341`: `fix(governance): untrack derived PURE requirement text from public repo and update gitignore`
+  - `fd745a1`: `docs(phase-1): document commit 181d341 in Checkpoint 1`
+  - `9dc3007`: `fix(notebooks): sanitize EDA notebook outputs to remove verbatim requirement text samples`
 - **Protection of Excluded Artifacts (Excluded from Public Git via `.gitignore`):**
   - `data/raw/*`: Raw Zenodo dataset downloads (only `data/raw/.gitkeep` tracked).
   - `data/interim/*.jsonl`: Derived full-text requirement corpora including `data/interim/pure_requirements.jsonl` (only `data/interim/.gitkeep` and aggregate statistics `data/interim/pure_filtering_stats.json` tracked).
