@@ -42,9 +42,14 @@ htmlcov/
 *.pem
 *.token
 
-# Data rules (MASTER_SPEC.md: never commit raw datasets)
+# Data rules (MASTER_SPEC.md: never commit raw or derived requirement text without redistribution rights)
 data/raw/*
 !data/raw/.gitkeep
+data/interim/*.jsonl
+!data/interim/.gitkeep
+!data/interim/pure_filtering_stats.json
+data/processed/*
+!data/processed/.gitkeep
 
 # Models & weights (MASTER_SPEC.md: never commit model weights)
 models/*

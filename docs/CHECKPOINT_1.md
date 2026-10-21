@@ -92,10 +92,13 @@ Removed no modal verb:      3749
 Removed < 5 tokens:         0
 Removed > 60 tokens:        143
 Retained requirements:      2928
-Output JSONL:               data\interim\pure_requirements.jsonl (891,855 bytes)
+Output JSONL (Local Only):  data\interim\pure_requirements.jsonl (891,855 bytes)
 Filtering Audit Log:        data\interim\pure_filtering_stats.json
 ============================================================
 ```
+
+> **Redistribution Rights Assessment & Repository Governance:**  
+> Because the PURE specifications were gathered from public web sources without explicit copyright transfer for third-party redistribution, the extracted full-text requirement corpus (`data/interim/pure_requirements.jsonl`) is maintained strictly as a **local generated artifact** and is excluded from Git tracking via `.gitignore`. It is generated deterministically and reproducibly on demand using `python -m checksense.cli build-corpus` from the verified official Zenodo archive. The aggregate filtering audit statistics (`data/interim/pure_filtering_stats.json`), which contain only numerical counts and schema metadata without raw requirement text, remain tracked in Git for auditability.
 
 #### Non-Overlapping Filter Pipeline Verification:
 The filtering stages in `src/checksense/corpus.py` are executed sequentially with immediate `continue` on failure, guaranteeing non-overlapping stages:
@@ -217,12 +220,19 @@ CheckSense Environment & Workspace Verification
   - `e20234e`: `feat(phase-1): acquire and verify datasets, build PURE corpus, eda notebooks, and checkpoint 1`
   - `c5c3639`: `docs(phase-1): synchronize per-document counts, QuRE row counts, and verification evidence`
   - `789d734`: `merge: safely reconcile remote origin/main into CheckSense`
-- **Protection of Excluded Artifacts:**
-  - `data/raw/*` (raw downloads): Ignored by `.gitignore` (only `data/raw/.gitkeep` tracked).
-  - `models/*`: Ignored by `.gitignore` (only `models/.gitkeep` tracked).
-  - `.env`: Ignored by `.gitignore`.
-  - `.venv/`: Ignored by `.gitignore`.
-- **Tracked Reproducibility Assets:** Code (`src/checksense/`), tests (`tests/`), EDA notebooks (`notebooks/01_pure_eda.ipynb`, `notebooks/02_arta_eda.ipynb`, `notebooks/03_qure_eda.ipynb`), interim data & stats (`data/interim/pure_filtering_stats.json`, `data/interim/pure_requirements.jsonl`), dataset manifest (`data/MANIFEST.md`), and documentation (`docs/`).
+- **Protection of Excluded Artifacts (Excluded from Public Git via `.gitignore`):**
+  - `data/raw/*`: Raw Zenodo dataset downloads (only `data/raw/.gitkeep` tracked).
+  - `data/interim/*.jsonl`: Derived full-text requirement corpora including `data/interim/pure_requirements.jsonl` (only `data/interim/.gitkeep` and aggregate statistics `data/interim/pure_filtering_stats.json` tracked).
+  - `data/processed/*`: Processed requirement datasets (only `data/processed/.gitkeep` tracked).
+  - `models/*`: Trained model weights and checkpoints (only `models/.gitkeep` tracked).
+  - `.env`: Environment variables, tokens, and secrets.
+  - `.venv/`: Python virtual environment and site-packages.
+- **Tracked Reproducibility Assets in Public Repository:**
+  - Code & Pipelines: `src/checksense/acquisition.py`, `src/checksense/corpus.py`, `src/checksense/cli.py`.
+  - Test Harness: `tests/test_cli.py`, `tests/test_env.py`, `tests/test_phase1.py` (28 unit tests).
+  - EDA Notebooks: `notebooks/01_pure_eda.ipynb`, `notebooks/02_arta_eda.ipynb`, `notebooks/03_qure_eda.ipynb`.
+  - Verification & Audit: `data/MANIFEST.md`, `data/interim/pure_filtering_stats.json` (aggregate counts without raw text).
+  - Specifications & Gates: `docs/CHECKPOINT_1.md`, `docs/HUMAN_TODO.md`, `docs/label_mapping.md`.
 
 ---
 
@@ -231,8 +241,9 @@ CheckSense Environment & Workspace Verification
 1. **Discrepancy Resolved (PURE XML Document Count):** The official Ferrari et al. Zenodo archive `requirements-xml.zip` contains **18 XML files**, not 19. All 18 documents were parsed and retained; zero documents dropped.
 2. **Discrepancy Resolved (QuRE Provenance):** Fully distinguished Concept DOI (`10.5281/zenodo.15656471`) from Version Record ID (`16049822` / DOI `10.5281/zenodo.16049822`, v1.0.1, CC-BY-4.0).
 3. **Discrepancy Resolved (PURE Rights Statement):** Recorded verbatim curator rights notice and takedown policy in MANIFEST and checkpoint.
-4. **Active Blocker (ARTA Licensing):** Official Zenodo record returns `"license": null`. Archive contains no license text. **ARTA model training in Phase 4 is BLOCKED** until the human reviewer establishes applicable reuse terms.
-5. **Active Blocker (ARTA Label Mapping):** Marked strictly as **PROPOSED (Awaiting Human Approval)** in `docs/label_mapping.md`.
+4. **Discrepancy Resolved (PURE Derived Text Redistribution Governance):** Evaluated third-party copyright and redistribution rights on extracted PURE requirement text. Established that public redistribution of extracted requirement text on GitHub is not authorized by the original specification owners. Removed `data/interim/pure_requirements.jsonl` from Git tracking and added `.gitignore` rules (`data/interim/*.jsonl`, `data/processed/*`). Preserved local file on disk for pipeline execution and retained publicly tracked audit statistics (`pure_filtering_stats.json`).
+5. **Active Blocker (ARTA Licensing):** Official Zenodo record returns `"license": null`. Archive contains no license text. **ARTA model training in Phase 4 is BLOCKED** until the human reviewer establishes applicable reuse terms.
+6. **Active Blocker (ARTA Label Mapping):** Marked strictly as **PROPOSED (Awaiting Human Approval)** in `docs/label_mapping.md`.
 
 ---
 
