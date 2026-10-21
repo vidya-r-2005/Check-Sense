@@ -220,6 +220,8 @@ CheckSense Environment & Workspace Verification
   - `e20234e`: `feat(phase-1): acquire and verify datasets, build PURE corpus, eda notebooks, and checkpoint 1`
   - `c5c3639`: `docs(phase-1): synchronize per-document counts, QuRE row counts, and verification evidence`
   - `789d734`: `merge: safely reconcile remote origin/main into CheckSense`
+  - `3a86b31`: `docs(phase-1): document remote GitHub synchronization in Checkpoint 1`
+  - `181d341`: `fix(governance): untrack derived PURE requirement text from public repo and update gitignore`
 - **Protection of Excluded Artifacts (Excluded from Public Git via `.gitignore`):**
   - `data/raw/*`: Raw Zenodo dataset downloads (only `data/raw/.gitkeep` tracked).
   - `data/interim/*.jsonl`: Derived full-text requirement corpora including `data/interim/pure_requirements.jsonl` (only `data/interim/.gitkeep` and aggregate statistics `data/interim/pure_filtering_stats.json` tracked).
