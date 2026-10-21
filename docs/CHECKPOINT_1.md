@@ -215,15 +215,23 @@ CheckSense Environment & Workspace Verification
 - **Remote Repository:** `https://github.com/vidya-r-2005/Check-Sense.git`
 - **Remote Tracking Branch:** `origin/main`
 - **Push Status:** **SYNCHRONIZED (Up-to-date with `origin/main`)**
-- **Recent Commit Chain:**
+- **Option A History Cleanup Execution:**
+  - `git-filter-repo` was executed to permanently purge `data/interim/pure_requirements.jsonl` and all historical versions of the 3 un-sanitized notebooks across all historical commits.
+  - The sanitized EDA notebooks were restored on `main` at `HEAD`.
+  - Object database audit: **0 exposed blobs in the entire repository history** (100% clean).
+- **Rewritten Commit Chain on `main`:**
+  - `c26dfbb`: `Initial commit`
+  - `f4db805`: `dataset uploaded`
   - `cd29d5f`: `feat(phase-0): initialize repo, environment, cli skeleton, vscode config, test harness, and checkpoint 0`
-  - `e20234e`: `feat(phase-1): acquire and verify datasets, build PURE corpus, eda notebooks, and checkpoint 1`
-  - `c5c3639`: `docs(phase-1): synchronize per-document counts, QuRE row counts, and verification evidence`
-  - `789d734`: `merge: safely reconcile remote origin/main into CheckSense`
-  - `3a86b31`: `docs(phase-1): document remote GitHub synchronization in Checkpoint 1`
-  - `181d341`: `fix(governance): untrack derived PURE requirement text from public repo and update gitignore`
-  - `fd745a1`: `docs(phase-1): document commit 181d341 in Checkpoint 1`
-  - `9dc3007`: `fix(notebooks): sanitize EDA notebook outputs to remove verbatim requirement text samples`
+  - `5ce71b0`: `feat(phase-1): acquire and verify datasets, build PURE corpus, eda notebooks, and checkpoint 1`
+  - `43c0c16`: `docs(phase-1): synchronize per-document counts, QuRE row counts, and verification evidence`
+  - `0d05106`: `merge: safely reconcile remote origin/main into CheckSense`
+  - `b3c5a0f`: `docs(phase-1): document remote GitHub synchronization in Checkpoint 1`
+  - `1218105`: `fix(governance): untrack derived PURE requirement text from public repo and update gitignore`
+  - `601e47a`: `docs(phase-1): document commit 1218105 in Checkpoint 1`
+  - `b635901`: `fix(notebooks): sanitize EDA notebook outputs to remove verbatim requirement text samples`
+  - `85f59b9`: `docs(phase-1): document sanitized notebooks commit in Checkpoint 1`
+  - `cc4b284`: `feat(notebooks): restore sanitized Phase 1 EDA notebooks with aggregate statistics`
 - **Protection of Excluded Artifacts (Excluded from Public Git via `.gitignore`):**
   - `data/raw/*`: Raw Zenodo dataset downloads (only `data/raw/.gitkeep` tracked).
   - `data/interim/*.jsonl`: Derived full-text requirement corpora including `data/interim/pure_requirements.jsonl` (only `data/interim/.gitkeep` and aggregate statistics `data/interim/pure_filtering_stats.json` tracked).
