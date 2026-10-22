@@ -232,6 +232,81 @@ def test_evaluation_accepts_verified_labels(tmp_path: Path) -> None:
     assert (tmp_path / "eval_out" / "config.json").exists()
 
 
+def test_evaluation_omitted_predictions_runs_b1_and_records_provenance(tmp_path: Path) -> None:
+    import json
+    verified_fixture = FIXTURES_DIR / "verified_annotations.csv"
+    out_dir = tmp_path / "b1_eval_out"
+
+    report = run_evaluation(
+        gold_file=verified_fixture,
+        predictions_file=None,
+        output_dir=out_dir,
+    )
+
+    assert report.n_requirements == 4
+    config_file = out_dir / "config.json"
+    assert config_file.exists()
+    with config_file.open("r", encoding="utf-8") as f:
+        config = json.load(f)
+
+    assert config["prediction_source"] == "b1_rules_generated"
+    assert config["model_name"] == "B1_rules"
+    assert config["predictions_file"] is None
+
+
+def test_evaluation_explicit_missing_predictions_file_raises_and_saves_nothing(tmp_path: Path) -> None:
+    verified_fixture = FIXTURES_DIR / "verified_annotations.csv"
+    missing_pred_file = tmp_path / "nonexistent_predictions.jsonl"
+    out_dir = tmp_path / "should_not_exist"
+
+    # Must raise FileNotFoundError and NOT silently fall back to B1
+    with pytest.raises(FileNotFoundError) as exc_info:
+        run_evaluation(
+            gold_file=verified_fixture,
+            predictions_file=missing_pred_file,
+            output_dir=out_dir,
+        )
+
+    assert "Explicitly specified predictions file not found" in str(exc_info.value)
+    # Output directory must not have been created / no outputs saved
+    assert not out_dir.exists()
+
+
+def test_evaluation_explicit_supplied_predictions_file_records_provenance(tmp_path: Path) -> None:
+    import json
+    verified_fixture = FIXTURES_DIR / "verified_annotations.csv"
+    preds_file = tmp_path / "dummy_preds.jsonl"
+    preds_file.write_text(
+        json.dumps({
+            "req_id": "REQ_TEST_001",
+            "gap_type": "ambiguity",
+            "subtype": "vague_term",
+            "span_text": "quickly",
+            "severity": 2,
+            "probability": 0.88,
+        }) + "\n",
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "custom_eval_out"
+
+    report = run_evaluation(
+        gold_file=verified_fixture,
+        predictions_file=preds_file,
+        output_dir=out_dir,
+        model_name="custom_detector_v1",
+    )
+
+    assert report.n_requirements == 4
+    config_file = out_dir / "config.json"
+    assert config_file.exists()
+    with config_file.open("r", encoding="utf-8") as f:
+        config = json.load(f)
+
+    assert config["prediction_source"] == "supplied_file"
+    assert config["model_name"] == "custom_detector_v1"
+    assert config["predictions_file"] == str(preds_file.resolve())
+
+
 # ============================================================================
 # 6. CLI Eval Subcommand Tests
 # ============================================================================
@@ -241,6 +316,22 @@ def test_cli_eval_refuses_unverified_fixture() -> None:
     exit_code = cli_main(["eval", "--gold-file", str(unverified_fixture)])
     # Strict gate refusal returns exit code 2
     assert exit_code == 2
+
+
+def test_cli_eval_fails_on_missing_predictions_file(tmp_path: Path) -> None:
+    verified_fixture = FIXTURES_DIR / "verified_annotations.csv"
+    missing_pred_file = tmp_path / "nonexistent_preds.jsonl"
+    out_dir = tmp_path / "cli_no_out"
+
+    exit_code = cli_main([
+        "eval",
+        "--gold-file", str(verified_fixture),
+        "--predictions-file", str(missing_pred_file),
+        "--output-dir", str(out_dir),
+    ])
+
+    assert exit_code == 1
+    assert not out_dir.exists()
 
 
 def test_cli_eval_succeeds_on_verified_fixture(tmp_path: Path) -> None:
