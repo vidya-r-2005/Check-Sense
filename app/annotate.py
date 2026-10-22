@@ -3,128 +3,38 @@
 Streamlit application for human gold annotation, pilot double-annotation,
 and verification of candidate requirement gaps per MASTER_SPEC.md Section 4.
 
-Binding Rules:
-1. LLM/AI suggestions are always marked [DRAFT] and saved as label_status='draft'
-   until explicitly verified by a human rater.
-2. Only human confirmation sets label_status='verified'.
-3. Clean requirements are saved with has_gap=0.
+Binding Integrity Rules:
+1. Sequestered Held-Out Test Set: Test documents and test-split requirements
+   CANNOT be loaded in this annotation workflow.
+2. Multi-Gap Support: Allows adding and editing multiple gap rows per requirement
+   without replacing or deleting previously saved gaps.
+3. Clean vs. Gap Exclusivity: A clean requirement (has_gap=0) and gap rows (has_gap=1)
+   can NEVER coexist for the same requirement.
+4. Validation Before Verification:
+   - For ambiguity and incompleteness, span_text must be a non-empty, exact substring
+     of the requirement text.
+   - Clarification question must end with exactly one '?' and contain no other question marks.
+   - Block save immediately if validation fails.
+5. Human Authority: Only explicit human confirmation sets label_status='verified'.
+   AI/LLM suggestions always remain marked [DRAFT].
 """
 
 from __future__ import annotations
 
-import csv
-import json
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
 
+from checksense.annotation import (
+    TAXONOMY,
+    load_annotation_sheet,
+    save_annotation_rows,
+    validate_requirement_annotations,
+)
 from checksense.baseline import detect_rule_gaps
 from checksense.frame import extract_requirement_frame
-
-# Taxonomy definitions
-TAXONOMY: dict[str, list[str]] = {
-    "ambiguity": [
-        "vague_term",
-        "vague_quantifier",
-        "anaphora",
-        "coordination",
-    ],
-    "incompleteness": [
-        "missing_actor",
-        "missing_condition",
-        "missing_threshold",
-        "missing_error_handling",
-    ],
-    "implicit": [
-        "unstated_constraint",
-    ],
-}
-
-ALL_SUBTYPES: list[str] = [sub for subs in TAXONOMY.values() for sub in subs]
-
-ANNOTATION_COLUMNS = [
-    "req_id",
-    "doc_id",
-    "text",
-    "has_gap",
-    "gap_type",
-    "subtype",
-    "span_text",
-    "severity",
-    "explanation",
-    "question",
-    "stakeholder_answer",
-    "refined_text",
-    "annotator",
-    "label_status",
-    "notes",
-]
-
-
-def load_requirements_pool(pool_path: Path) -> list[dict[str, Any]]:
-    """Load requirements pool from JSONL or pilot CSV."""
-    if not pool_path.exists():
-        return []
-    records: list[dict[str, Any]] = []
-    if pool_path.suffix.lower() == ".jsonl":
-        with open(pool_path, encoding="utf-8") as f:
-            for line in f:
-                line_str = line.strip()
-                if line_str:
-                    records.append(json.loads(line_str))
-    elif pool_path.suffix.lower() == ".csv":
-        with open(pool_path, encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            seen: set[str] = set()
-            for row in reader:
-                req_id = row.get("req_id", "").strip()
-                if req_id and req_id not in seen:
-                    records.append({
-                        "req_id": req_id,
-                        "doc_id": row.get("doc_id", ""),
-                        "text": row.get("text", ""),
-                        "source_file": row.get("notes", ""),
-                    })
-                    seen.add(req_id)
-    return records
-
-
-def load_existing_annotations(csv_path: Path) -> dict[str, list[dict[str, str]]]:
-    """Load existing annotation rows mapped by req_id."""
-    if not csv_path.exists():
-        return defaultdict(list)
-    req_map: dict[str, list[dict[str, str]]] = defaultdict(list)
-    with open(csv_path, encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            req_id = row.get("req_id", "").strip()
-            if req_id:
-                req_map[req_id].append(row)
-    return req_map
-
-
-def save_annotation_rows(
-    csv_path: Path,
-    req_id: str,
-    new_rows: list[dict[str, Any]],
-) -> None:
-    """Safely update or insert annotation rows for a specific req_id."""
-    existing_map = load_existing_annotations(csv_path)
-    existing_map[req_id] = [
-        {col: str(r.get(col, "")) for col in ANNOTATION_COLUMNS}
-        for r in new_rows
-    ]
-
-    # Write out complete CSV atomically
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(csv_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=ANNOTATION_COLUMNS)
-        writer.writeheader()
-        for rid in sorted(existing_map.keys()):
-            for row in existing_map[rid]:
-                writer.writerow(row)
+from checksense.sample import load_annotation_workflow_pool
 
 
 def main():
@@ -137,7 +47,7 @@ def main():
     st.title("🔍 CheckSense: Requirement Gap Annotation & Verification Tool")
     st.markdown(
         "**Phase 3 Protocol:** Human-in-the-loop gold annotation. "
-        "AI suggestions are tagged `[DRAFT]` and require explicit human verification to confirm."
+        "AI suggestions are tagged `[DRAFT]`. Only explicit human verification sets `label_status='verified'`."
     )
 
     # Sidebar: Session Settings & Progress
@@ -150,33 +60,43 @@ def main():
         )
         st.session_state["annotator_id"] = annotator_id
 
-        # Target annotation CSV
-        st.subheader("📁 File Paths")
+        # Target dataset selector
+        st.subheader("📁 Dataset Selection")
         source_mode = st.radio(
-            "Source Dataset",
-            ["Pilot Sample (50 reqs)", "Full Sample Pool (600+ reqs)", "Custom Path"],
+            "Workflow Queue",
+            ["Pilot Sample (50 reqs)", "Development Pool (Dev Split Only)", "Custom Path"],
         )
         if source_mode == "Pilot Sample (50 reqs)":
             source_file = Path("data/gold/pilot_sample.csv")
-        elif source_mode == "Full Sample Pool (600+ reqs)":
-            source_file = Path("data/gold/sample_pool.jsonl")
+        elif source_mode == "Development Pool (Dev Split Only)":
+            source_file = Path("data/gold/dev_pool.jsonl")
         else:
-            source_file = Path(st.text_input("Custom Source Path", "data/gold/pilot_sample.csv"))
+            custom_input = st.text_input("Custom Queue Path", "data/gold/pilot_sample.csv")
+            source_file = Path(custom_input)
 
         target_file = Path(
             st.text_input("Save Target CSV", "data/gold/annotations.csv")
         )
 
-        requirements = load_requirements_pool(source_file)
-        existing_annots = load_existing_annotations(target_file)
+        # Load requirements using sequestering loader
+        try:
+            requirements = load_annotation_workflow_pool(source_file)
+        except PermissionError as e:
+            st.error(f"🚫 {e}")
+            return
+        except Exception as e:
+            st.error(f"Error loading queue: {e}")
+            return
+
+        existing_annots = load_annotation_sheet(target_file)
 
         st.markdown("---")
-        st.subheader("📊 Verification Progress")
+        st.subheader("📊 Queue Progress")
         n_total = len(requirements)
         n_reviewed = len(existing_annots)
         n_verified = sum(
             1 for rows in existing_annots.values()
-            if any(r.get("label_status") == "verified" for r in rows)
+            if all(r.get("label_status") == "verified" for r in rows if r)
         )
         n_draft = sum(
             1 for rows in existing_annots.values()
@@ -196,8 +116,8 @@ def main():
 
     if not requirements:
         st.warning(
-            f"No requirements found in `{source_file}`. "
-            "Run `python -m checksense.cli sample` to generate the sampling pool."
+            f"No accessible development requirements found in `{source_file}`. "
+            "Run `python -m checksense.cli sample` to generate the dev pool and pilot sheets."
         )
         return
 
@@ -208,7 +128,10 @@ def main():
         selected_idx = st.selectbox(
             "Select Requirement",
             options=req_indices,
-            format_func=lambda i: f"#{i+1} [{requirements[i]['req_id']}] ({'VERIFIED' if any(r.get('label_status') == 'verified' for r in existing_annots.get(requirements[i]['req_id'], [])) else 'UNREVIEWED'})",
+            format_func=lambda i: (
+                f"#{i+1} [{requirements[i]['req_id']}] ("
+                f"{'VERIFIED' if all(r.get('label_status') == 'verified' for r in existing_annots.get(requirements[i]['req_id'], [])) and existing_annots.get(requirements[i]['req_id']) else 'UNREVIEWED'})"
+            ),
             index=st.session_state.get("current_idx", 0),
         )
         st.session_state["current_idx"] = selected_idx
@@ -230,7 +153,7 @@ def main():
     with col_nav3:
         status_badge = "⚪ Unreviewed"
         if current_saved:
-            if any(r.get("label_status") == "verified" for r in current_saved):
+            if all(r.get("label_status") == "verified" for r in current_saved):
                 status_badge = "🟢 VERIFIED by Human"
             elif any(r.get("label_status") == "draft" for r in current_saved):
                 status_badge = "🟡 DRAFT (Awaiting Human Review)"
@@ -277,215 +200,284 @@ def main():
     st.markdown("---")
     st.subheader("✍️ Human Annotation Editor")
 
+    # Determine whether current saved state is clean or has gaps
+    is_currently_clean = (
+        bool(current_saved)
+        and len(current_saved) == 1
+        and str(current_saved[0].get("has_gap", "")).strip().lower() in ("0", "false")
+    )
     decision = st.radio(
-        "Does this requirement contain a defect or quality gap?",
-        ["Clean (No Gap)", "Defective (Has Gap)"],
-        index=0 if current_saved and any(r.get("has_gap") == "0" for r in current_saved) else 1 if current_saved else 0,
+        "Annotation Decision for this Requirement:",
+        ["Clean (No Quality Gaps)", "Defective (One or More Gaps)"],
+        index=0 if is_currently_clean or (not current_saved) else 1,
         horizontal=True,
     )
 
-    if decision == "Clean (No Gap)":
+    if decision == "Clean (No Quality Gaps)":
         clean_notes = st.text_input(
             "Notes / Verification Justification",
-            value=current_saved[0].get("notes", "") if current_saved else "Requirement is unambiguous, complete, and verifiable.",
+            value=current_saved[0].get("notes", "") if is_currently_clean else "Requirement is clear, complete, and verifiable.",
         )
         col_c1, col_c2 = st.columns(2)
         with col_c1:
             if st.button("💾 Save as DRAFT (Clean)", use_container_width=True):
-                save_annotation_rows(
-                    target_file,
-                    req_id,
-                    [{
-                        "req_id": req_id,
-                        "doc_id": doc_id,
-                        "text": req_text,
-                        "has_gap": "0",
-                        "gap_type": "",
-                        "subtype": "",
-                        "span_text": "",
-                        "severity": "",
-                        "explanation": "",
-                        "question": "",
-                        "stakeholder_answer": "",
-                        "refined_text": "",
-                        "annotator": annotator_id,
-                        "label_status": "draft",
-                        "notes": clean_notes,
-                    }],
-                )
-                st.success("Saved as clean [DRAFT].")
-                st.rerun()
-        with col_c2:
-            if st.button("✅ Confirm & VERIFY Clean Requirement", type="primary", use_container_width=True):
-                save_annotation_rows(
-                    target_file,
-                    req_id,
-                    [{
-                        "req_id": req_id,
-                        "doc_id": doc_id,
-                        "text": req_text,
-                        "has_gap": "0",
-                        "gap_type": "",
-                        "subtype": "",
-                        "span_text": "",
-                        "severity": "",
-                        "explanation": "",
-                        "question": "",
-                        "stakeholder_answer": "",
-                        "refined_text": "",
-                        "annotator": annotator_id,
-                        "label_status": "verified",
-                        "notes": clean_notes,
-                    }],
-                )
-                st.success("Confirmed and saved as [VERIFIED] clean requirement!")
-                st.rerun()
-
-    else:
-        # Multi-gap editor
-        existing_gap_rows = [r for r in current_saved if r.get("has_gap") in ("1", "true", "True") or r.get("gap_type")]
-        if not existing_gap_rows and rule_gaps:
-            st.info("💡 Tip: You can pre-fill from an AI draft suggestion below.")
-            if st.button("📋 Import First B1 Rule Suggestion"):
-                rg0 = rule_gaps[0]
-                existing_gap_rows = [{
+                clean_row = [{
                     "req_id": req_id,
                     "doc_id": doc_id,
                     "text": req_text,
-                    "has_gap": "1",
-                    "gap_type": rg0.gap_type,
-                    "subtype": rg0.subtype,
-                    "span_text": rg0.span_text,
-                    "severity": str(rg0.severity),
-                    "explanation": rg0.explanation,
-                    "question": rg0.question,
+                    "has_gap": "0",
+                    "gap_type": "",
+                    "subtype": "",
+                    "span_text": "",
+                    "severity": "",
+                    "explanation": "",
+                    "question": "",
                     "stakeholder_answer": "",
                     "refined_text": "",
                     "annotator": annotator_id,
                     "label_status": "draft",
-                    "notes": "Imported from Baseline B1 (Draft)",
+                    "notes": clean_notes,
                 }]
+                save_annotation_rows(target_file, req_id, clean_row, req_text=req_text, for_verification=False)
+                st.success("Saved as clean [DRAFT]. Any previous gaps replaced.")
+                st.rerun()
+        with col_c2:
+            if st.button("✅ Confirm & VERIFY Clean Requirement", type="primary", use_container_width=True):
+                clean_row = [{
+                    "req_id": req_id,
+                    "doc_id": doc_id,
+                    "text": req_text,
+                    "has_gap": "0",
+                    "gap_type": "",
+                    "subtype": "",
+                    "span_text": "",
+                    "severity": "",
+                    "explanation": "",
+                    "question": "",
+                    "stakeholder_answer": "",
+                    "refined_text": "",
+                    "annotator": annotator_id,
+                    "label_status": "verified",
+                    "notes": clean_notes,
+                }]
+                save_annotation_rows(target_file, req_id, clean_row, req_text=req_text, for_verification=True)
+                st.success("Confirmed and verified clean requirement!")
+                st.rerun()
 
-        # Primary gap entry form
-        row0 = existing_gap_rows[0] if existing_gap_rows else {}
-        c_class, c_sub, c_sev = st.columns(3)
-        with c_class:
-            selected_class = st.selectbox(
-                "Gap Class",
-                options=["ambiguity", "incompleteness", "implicit"],
-                index=["ambiguity", "incompleteness", "implicit"].index(row0.get("gap_type", "ambiguity")) if row0.get("gap_type") in ["ambiguity", "incompleteness", "implicit"] else 0,
-            )
-        with c_sub:
-            subtypes = TAXONOMY[selected_class]
-            curr_sub = row0.get("subtype", subtypes[0])
-            sub_idx = subtypes.index(curr_sub) if curr_sub in subtypes else 0
-            selected_subtype = st.selectbox("Subtype", options=subtypes, index=sub_idx)
-        with c_sev:
-            curr_sev = int(row0.get("severity", "2")) if str(row0.get("severity", "")).isdigit() else 2
-            selected_sev = st.radio(
-                "Severity (1=Minor, 2=Rework, 3=Wrong Behaviour / Safety)",
-                [1, 2, 3],
-                index=curr_sev - 1,
-                horizontal=True,
-            )
-
-        col_span, col_expl = st.columns(2)
-        with col_span:
-            span_val = st.text_input(
-                "Defective Span Text",
-                value=row0.get("span_text", ""),
-                help="Substring in requirement (for ambiguity and incompleteness).",
-            )
-            if span_val and span_val not in req_text and selected_class != "implicit":
-                st.warning("⚠️ Warning: Span text is not an exact substring of the requirement text.")
-        with col_expl:
-            expl_val = st.text_input(
-                "Explanation",
-                value=row0.get("explanation", ""),
-                help="One concise sentence explaining the defect.",
-            )
-
-        col_q, col_ans = st.columns(2)
-        with col_q:
-            q_val = st.text_input(
-                "Clarification Question",
-                value=row0.get("question", ""),
-                help="Targeted question ending with exactly one '?'",
-            )
-            if q_val and not q_val.strip().endswith("?"):
-                st.warning("⚠️ Clarification question must end with a question mark ('?').")
-        with col_ans:
-            ans_val = st.text_input(
-                "Stakeholder Answer (Optional)",
-                value=row0.get("stakeholder_answer", ""),
-                help="Answer clarifying the requirement.",
-            )
-
-        refined_val = st.text_area(
-            "Refined Requirement (Optional)",
-            value=row0.get("refined_text", ""),
-            help="Rewritten requirement closing the gap.",
-        )
-        notes_val = st.text_input("Annotator Notes", value=row0.get("notes", ""))
-
-        col_save_draft, col_save_verify = st.columns(2)
-        with col_save_draft:
-            if st.button("💾 Save as DRAFT (Pending Review)", use_container_width=True):
-                save_annotation_rows(
-                    target_file,
-                    req_id,
-                    [{
+    else:
+        # Multi-Gap Workflow
+        session_key = f"gaps_{req_id}"
+        if session_key not in st.session_state:
+            # Initialize from existing saved gaps (if any)
+            saved_gaps = [
+                r for r in current_saved
+                if str(r.get("has_gap", "")).strip().lower() in ("1", "true") or bool(r.get("gap_type"))
+            ]
+            if saved_gaps:
+                st.session_state[session_key] = [dict(g) for g in saved_gaps]
+            elif rule_gaps:
+                # Pre-fill draft from B1 rule suggestions
+                st.session_state[session_key] = [
+                    {
                         "req_id": req_id,
                         "doc_id": doc_id,
                         "text": req_text,
                         "has_gap": "1",
-                        "gap_type": selected_class,
-                        "subtype": selected_subtype,
-                        "span_text": span_val,
-                        "severity": str(selected_sev),
-                        "explanation": expl_val,
-                        "question": q_val,
-                        "stakeholder_answer": ans_val,
-                        "refined_text": refined_val,
+                        "gap_type": rg.gap_type,
+                        "subtype": rg.subtype,
+                        "span_text": rg.span_text,
+                        "severity": str(rg.severity),
+                        "explanation": rg.explanation,
+                        "question": rg.question,
+                        "stakeholder_answer": "",
+                        "refined_text": "",
                         "annotator": annotator_id,
                         "label_status": "draft",
-                        "notes": notes_val,
-                    }],
-                )
-                st.success("Gap saved as [DRAFT].")
+                        "notes": "Imported from Baseline B1 (Draft)",
+                    }
+                    for rg in rule_gaps
+                ]
+            else:
+                # Initialize empty gap row
+                st.session_state[session_key] = [{
+                    "req_id": req_id,
+                    "doc_id": doc_id,
+                    "text": req_text,
+                    "has_gap": "1",
+                    "gap_type": "ambiguity",
+                    "subtype": "vague_term",
+                    "span_text": "",
+                    "severity": "2",
+                    "explanation": "",
+                    "question": "",
+                    "stakeholder_answer": "",
+                    "refined_text": "",
+                    "annotator": annotator_id,
+                    "label_status": "draft",
+                    "notes": "",
+                }]
+
+        current_gaps: list[dict[str, Any]] = st.session_state[session_key]
+
+        st.markdown(f"**Identified Gaps ({len(current_gaps)} total):**")
+
+        # Edit each gap in an expander or container
+        for idx, gap in enumerate(current_gaps):
+            with st.container(border=True):
+                st.markdown(f"##### Gap #{idx + 1}: `{gap.get('gap_type', '')} / {gap.get('subtype', '')}`")
+                col_c, col_s, col_sev, col_del = st.columns([2, 2, 2, 1])
+
+                with col_c:
+                    curr_c = gap.get("gap_type", "ambiguity")
+                    c_idx = ["ambiguity", "incompleteness", "implicit"].index(curr_c) if curr_c in ["ambiguity", "incompleteness", "implicit"] else 0
+                    new_class = st.selectbox(
+                        "Class",
+                        options=["ambiguity", "incompleteness", "implicit"],
+                        index=c_idx,
+                        key=f"c_{req_id}_{idx}",
+                    )
+                    gap["gap_type"] = new_class
+
+                with col_s:
+                    subtypes = TAXONOMY[new_class]
+                    curr_sub = gap.get("subtype", subtypes[0])
+                    s_idx = subtypes.index(curr_sub) if curr_sub in subtypes else 0
+                    new_sub = st.selectbox(
+                        "Subtype",
+                        options=subtypes,
+                        index=s_idx,
+                        key=f"sub_{req_id}_{idx}",
+                    )
+                    gap["subtype"] = new_sub
+
+                with col_sev:
+                    curr_sev = int(gap.get("severity", "2")) if str(gap.get("severity", "")).isdigit() else 2
+                    new_sev = st.selectbox(
+                        "Severity",
+                        options=[1, 2, 3],
+                        index=curr_sev - 1,
+                        format_func=lambda s: f"Severity {s}",
+                        key=f"sev_{req_id}_{idx}",
+                    )
+                    gap["severity"] = str(new_sev)
+
+                with col_del:
+                    st.write("")
+                    st.write("")
+                    if st.button("🗑️ Delete", key=f"del_{req_id}_{idx}"):
+                        current_gaps.pop(idx)
+                        st.session_state[session_key] = current_gaps
+                        st.rerun()
+
+                col_span, col_expl = st.columns(2)
+                with col_span:
+                    gap["span_text"] = st.text_input(
+                        "Defective Span Text",
+                        value=gap.get("span_text", ""),
+                        key=f"span_{req_id}_{idx}",
+                        help="Exact substring within the requirement text (for ambiguity and incompleteness).",
+                    )
+                with col_expl:
+                    gap["explanation"] = st.text_input(
+                        "Explanation",
+                        value=gap.get("explanation", ""),
+                        key=f"expl_{req_id}_{idx}",
+                        help="Concise one-sentence rationale.",
+                    )
+
+                col_q, col_ans = st.columns(2)
+                with col_q:
+                    gap["question"] = st.text_input(
+                        "Clarification Question",
+                        value=gap.get("question", ""),
+                        key=f"q_{req_id}_{idx}",
+                        help="Question ending with exactly one '?'",
+                    )
+                with col_ans:
+                    gap["stakeholder_answer"] = st.text_input(
+                        "Stakeholder Answer (Optional)",
+                        value=gap.get("stakeholder_answer", ""),
+                        key=f"ans_{req_id}_{idx}",
+                    )
+
+                col_ref, col_notes = st.columns(2)
+                with col_ref:
+                    gap["refined_text"] = st.text_input(
+                        "Refined Requirement (Optional)",
+                        value=gap.get("refined_text", ""),
+                        key=f"ref_{req_id}_{idx}",
+                    )
+                with col_notes:
+                    gap["notes"] = st.text_input(
+                        "Notes",
+                        value=gap.get("notes", ""),
+                        key=f"notes_{req_id}_{idx}",
+                    )
+
+        if st.button("➕ Add Another Gap to this Requirement"):
+            current_gaps.append({
+                "req_id": req_id,
+                "doc_id": doc_id,
+                "text": req_text,
+                "has_gap": "1",
+                "gap_type": "ambiguity",
+                "subtype": "vague_term",
+                "span_text": "",
+                "severity": "2",
+                "explanation": "",
+                "question": "",
+                "stakeholder_answer": "",
+                "refined_text": "",
+                "annotator": annotator_id,
+                "label_status": "draft",
+                "notes": "",
+            })
+            st.session_state[session_key] = current_gaps
+            st.rerun()
+
+        st.markdown("---")
+        col_save_draft, col_save_verify = st.columns(2)
+        with col_save_draft:
+            if st.button(f"💾 Save All {len(current_gaps)} Gaps as DRAFT", use_container_width=True):
+                for g in current_gaps:
+                    g["label_status"] = "draft"
+                    g["annotator"] = annotator_id
+                    g["has_gap"] = "1"
+                    g["req_id"] = req_id
+                    g["doc_id"] = doc_id
+                    g["text"] = req_text
+                save_annotation_rows(target_file, req_id, current_gaps, req_text=req_text, for_verification=False)
+                st.success(f"Saved {len(current_gaps)} gap(s) as [DRAFT].")
                 st.rerun()
 
         with col_save_verify:
-            if st.button("✅ Confirm & VERIFY Gap Label", type="primary", use_container_width=True):
-                if not span_val and selected_class != "implicit":
-                    st.error("Span text is required for ambiguity and incompleteness gaps.")
-                    return
-                if q_val and not q_val.strip().endswith("?"):
-                    st.error("Question must end with '?' before verification.")
-                    return
-                save_annotation_rows(
-                    target_file,
-                    req_id,
-                    [{
-                        "req_id": req_id,
-                        "doc_id": doc_id,
-                        "text": req_text,
-                        "has_gap": "1",
-                        "gap_type": selected_class,
-                        "subtype": selected_subtype,
-                        "span_text": span_val,
-                        "severity": str(selected_sev),
-                        "explanation": expl_val,
-                        "question": q_val,
-                        "stakeholder_answer": ans_val,
-                        "refined_text": refined_val,
-                        "annotator": annotator_id,
-                        "label_status": "verified",
-                        "notes": notes_val,
-                    }],
+            if st.button(f"✅ Confirm & VERIFY All {len(current_gaps)} Gaps", type="primary", use_container_width=True):
+                for g in current_gaps:
+                    g["label_status"] = "verified"
+                    g["annotator"] = annotator_id
+                    g["has_gap"] = "1"
+                    g["req_id"] = req_id
+                    g["doc_id"] = doc_id
+                    g["text"] = req_text
+
+                # STRICT VALIDATION BEFORE VERIFICATION
+                validation_errors = validate_requirement_annotations(
+                    req_text=req_text,
+                    rows=current_gaps,
+                    for_verification=True,
                 )
-                st.success("Confirmed and saved as human [VERIFIED] gap!")
-                st.rerun()
+                if validation_errors:
+                    st.error("🚫 Cannot verify requirement! Fix the following validation errors:")
+                    for err in validation_errors:
+                        st.error(f"• {err}")
+                    return
+
+                try:
+                    save_annotation_rows(target_file, req_id, current_gaps, req_text=req_text, for_verification=True)
+                    st.success(f"Confirmed and verified {len(current_gaps)} gap row(s)!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error saving verified rows: {e}")
 
 
 if __name__ == "__main__":

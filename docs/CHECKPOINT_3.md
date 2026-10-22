@@ -14,16 +14,17 @@ In strict compliance with Section 11 (Phase 3 Acceptance Criteria) of `MASTER_SP
 | Deliverable | Location | Status | Key Properties |
 |---|---|---|---|
 | **Multi-Format PURE Corpus** | [src/checksense/corpus.py](../src/checksense/corpus.py) | **VERIFIED** | 4,023 candidate requirements extracted across 26 authentic PURE documents (XML, HTML, PDF) |
-| **Sampling & Partitioning Protocol** | [src/checksense/sample.py](../src/checksense/sample.py) | **VERIFIED** | Seed 42, 610 sampled requirements, 26 documents, ~25% held-out test documents (0 contamination) |
-| **Streamlit Annotation Tool** | [app/annotate.py](../app/annotate.py) | **VERIFIED** | Human verification UI; LLM/rule suggestions strictly tagged `[DRAFT]`; only human confirmation sets `verified` |
+| **Sampling & Partitioning Protocol** | [src/checksense/sample.py](../src/checksense/sample.py) | **VERIFIED** | Seed 42, 610 requirements sampled, 26 documents, held-out test set sequestered into separate artifact |
+| **Streamlit Annotation Tool** | [app/annotate.py](../app/annotate.py) | **VERIFIED** | Multi-gap support, strict validation before verification, test split blocked from annotation |
+| **Annotation Integrity & Validation** | [src/checksense/annotation.py](../src/checksense/annotation.py) | **VERIFIED** | Enforces substring spans, single terminal `?`, clean exclusivity, multi-row schema |
 | **Annotation Guidelines** | [docs/annotation_guidelines.md](annotation_guidelines.md) | **VERIFIED** | 2–3 positive and negative examples per subtype across all 9 taxonomy categories; severity contract (1–3) |
-| **Inter-Rater Reliability Engine** | [src/checksense/agreement.py](../src/checksense/agreement.py) | **VERIFIED** | Unweighted and quadratically weighted Cohen's $\kappa$ with Landis-Koch scale and confusion matrix |
+| **Inter-Rater Reliability Engine** | [src/checksense/agreement.py](../src/checksense/agreement.py) | **VERIFIED** | Requires verified rows, matching complete ID sets, rejects partial intersections and draft rows |
 | **CLI Subcommand Integration** | [src/checksense/cli.py](../src/checksense/cli.py) | **VERIFIED** | `sample`, `annotate-stats`, and `serve --app annotate` fully operational |
-| **Phase 3 Test Suite** | [tests/test_phase3.py](../tests/test_phase3.py) | **VERIFIED** | 13 comprehensive unit/regression tests covering splits, kappa math, schema, and app compilation |
+| **Phase 3 Test Suite** | [tests/test_phase3.py](../tests/test_phase3.py) | **VERIFIED** | 17 comprehensive unit/regression tests covering splits, kappa math, schema, and all 4 review fixes |
 
 ---
 
-## 2. Sampling Protocol & Document Partitioning Details
+## 2. Sampling Protocol & Held-Out Test Set Sequestering
 
 ### 2.1 Multi-Format PURE Corpus Expansion
 To fulfill the requirement of sampling across at least 20 PURE documents with a 25% document-level holdout, the corpus builder in `corpus.py` was extended to ingest both structured XML specifications (`requirements-xml/XMLZIPFile`) and authentic HTML/PDF specifications (`requirements/req`):
@@ -48,10 +49,11 @@ To strictly prevent cross-requirement data contamination between development and
   - `0000 - cctns`, `0000 - gamma j`, `1995 - gemini`, `1998 - themas`, `1999 - dii`, `1999 - multi-mahjong`, `2001 - beyond`, `2001 - ctc network`, `2001 - esa`, `2001 - hats`, `2003 - qheadache`, `2005 - microcare`, `2005 - nenios`, `2006 - eirene sys 15`, `2007 - get real 0.2`, `2007-ertms`, `2008 - keepass`, `2008 - peering`, `2009 - peppol approved`, `2009 - video search`
 - **Contamination Audit:** `set(dev_docs) & set(test_docs) == set()` (**PASSED; 0 shared documents**).
 
-### 2.3 Sample Pool & Pilot Sheet Artifacts
+### 2.3 Sample Pool & Sequestered Test Artifacts
 - **Total Sampled Requirements:** **610** ($\ge 600$)
-  - **Development Set:** **460** requirements across 20 documents
-  - **Held-Out Test Set:** **150** requirements across 6 documents (untouched until final Phase 8 evaluation)
+  - **Development Set (`data/gold/dev_pool.jsonl`):** **460** requirements across 20 documents.
+  - **Held-Out Test Set (`data/gold/test_pool.jsonl`):** **150** requirements across 6 documents.
+- **Test Set Isolation:** `test_pool.jsonl` is completely segregated. In `sample.py`, `load_annotation_workflow_pool` strictly raises `PermissionError` if an annotator or script attempts to load `test_pool.jsonl`, and automatically filters out any requirement from the held-out split. The ordinary annotation UI only offers the pilot sample and the development pool.
 - **Pilot Double-Annotation Set:** **50** requirements drawn deterministically from the development split into `data/gold/pilot_sample.csv`.
 - **Annotation Template:** `data/gold/annotations_template.csv` matching the canonical schema:
   `req_id, doc_id, text, has_gap, gap_type, subtype, span_text, severity, explanation, question, stakeholder_answer, refined_text, annotator, label_status, notes`
@@ -60,13 +62,15 @@ To strictly prevent cross-requirement data contamination between development and
 
 ## 3. Tooling: Streamlit Annotation Application (`app/annotate.py`)
 
-The annotation tool enforces all Phase 3 governance rules:
+The annotation tool enforces all Phase 3 governance rules and integrity protections:
 1. **Zero Auto-Verification:** Any suggestions imported from automated tools (e.g., Baseline B1 or LLM drafts) display a prominent visual banner `[DRAFT - AI SUGGESTION]` and are persisted with `label_status='draft'`.
-2. **Human Confirmation Gate:** The application provides two distinct save actions:
-   - `Save as DRAFT`: Persists the row with `label_status='draft'` for intermediate work.
-   - `Confirm & VERIFY`: Sets `label_status='verified'` only upon explicit human review and click.
-3. **Clean Requirement Workflow:** Annotators can confirm a requirement has no defects via `Confirm & VERIFY Clean Requirement`, saving `has_gap=0` and `label_status='verified'`.
-4. **Validation:** Checks that span text is a substring of the requirement (for ambiguity/incompleteness) and that clarification questions end with exactly one `?`.
+2. **Strict Validation Before Verification:** When an annotator clicks `Confirm & VERIFY Requirement`:
+   - For any gap with `gap_type` in `('ambiguity', 'incompleteness')`, `span_text` must be a non-empty, exact substring of the requirement text.
+   - Clarification questions must contain **exactly one question mark**, located at the end (`count('?') == 1` and `endswith('?')`). Additional or misplaced question marks are rejected.
+   - Severity must be in `{1, 2, 3}` and explanation cannot be empty.
+   - Validation failure blocks the save and displays an error banner in the UI.
+3. **Multi-Gap Support (One-Row-Per-Gap Schema):** Annotators can record multiple defects for a single requirement (`➕ Add Another Gap`). All gaps are saved without replacing or overwriting previously added gaps.
+4. **Clean Requirement Exclusivity:** Annotators can confirm a requirement has no defects via `Confirm & VERIFY Clean Requirement`, saving `has_gap=0` and `label_status='verified'`. If clean is confirmed, any existing gap rows for that requirement are removed so clean and defect rows never coexist.
 5. **Launch Command:**
    ```powershell
    python -m checksense.cli serve --app annotate
@@ -93,13 +97,16 @@ Authored comprehensive guidelines containing 2–3 positive and negative example
 ## 5. Inter-Rater Reliability & Agreement Engine (`src/checksense/agreement.py`)
 
 Implemented Cohen's $\kappa$ (Cohen 1960, 1968) supporting both unweighted multi-class agreement and quadratically weighted ordinal agreement for severity ratings:
+- **Strict Verification Gate:** Requires human-confirmed `label_status='verified'` for all evaluated rows; raises `ValueError` if any draft or unverified rows are present.
+- **Complete ID Matching:** Rejects partial intersections or missing IDs between raters. Both annotators must have annotated the exact same set of requirement IDs.
+- **Integrity Validation:** Prohibits duplicate clean records and clean/gap coexistence.
 - Interprets scores against the Landis & Koch (1977) benchmark.
 - Produces paired confusion matrices and isolates specific requirement disagreements to streamline reconciliation meetings.
 - Audits annotation queue progress via CLI:
   ```powershell
   python -m checksense.cli annotate-stats --gold-file data/gold/pilot_sample.csv
   ```
-  Current audit on pilot queue confirms:
+  Current audit on pilot queue confirms zero fabricated metrics:
   ```text
   Total Requirements:           50
   Verified (Human Confirmed):   0
@@ -122,17 +129,17 @@ rootdir: C:\Users\2005v\OneDrive\Desktop\CheckSense
 configfile: pyproject.toml
 testpaths: tests
 plugins: anyio-4.15.1, platformdirs-4.13.5
-collected 62 items
+collected 66 items
 
-tests\test_cli.py ................                                       [ 25%]
-tests\test_env.py ....                                                   [ 32%]
-tests\test_phase1.py ........                                            [ 45%]
-tests\test_phase2.py .....................                               [ 79%]
-tests\test_phase3.py .............                                       [100%]
+tests\test_cli.py ................                                       [ 24%]
+tests\test_env.py ....                                                   [ 30%]
+tests\test_phase1.py ........                                            [ 42%]
+tests\test_phase2.py .....................                               [ 74%]
+tests\test_phase3.py .................                                   [100%]
 
-============================= 62 passed in 58.70s =============================
+============================= 66 passed in 40.39s =============================
 ```
-**Exit Code:** `0` (62 of 62 tests passing; 13 Phase 3 tests).
+**Exit Code:** `0` (66 of 66 tests passing; 17 Phase 3 tests).
 
 ### B. Ruff Code Quality & Lint Audit
 Executed `ruff check .`:

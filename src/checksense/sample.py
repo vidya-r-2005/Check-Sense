@@ -162,7 +162,20 @@ def sample_requirements(
     dev_count = sum(1 for r in sampled_records if r["split"] == "dev")
     test_count = sum(1 for r in sampled_records if r["split"] == "test")
 
-    # 4. Write sample pool (JSONL)
+    # 4. Write separated pools to protect held-out test set
+    dev_pool_path = output_dir / "dev_pool.jsonl"
+    with open(dev_pool_path, "w", encoding="utf-8") as f:
+        for r in sampled_records:
+            if r["split"] == "dev":
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    test_pool_path = output_dir / "test_pool.jsonl"
+    with open(test_pool_path, "w", encoding="utf-8") as f:
+        for r in sampled_records:
+            if r["split"] == "test":
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    # Also maintain master sample pool for provenance
     sample_pool_path = output_dir / "sample_pool.jsonl"
     with open(sample_pool_path, "w", encoding="utf-8") as f:
         for r in sampled_records:
@@ -225,6 +238,8 @@ def sample_requirements(
             "status": "PASSED (0 document overlap)",
         },
         "artifacts": {
+            "dev_pool": str(dev_pool_path),
+            "test_pool_sequestered": str(test_pool_path),
             "sample_pool": str(sample_pool_path),
             "pilot_sample": str(pilot_file_path),
             "annotations_template": str(template_path),
@@ -235,3 +250,81 @@ def sample_requirements(
     manifest_path.write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
 
     return manifest_data
+
+
+def load_annotation_workflow_pool(
+    pool_path: Path,
+    manifest_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Load requirements pool for the human annotation workflow.
+
+    STRICT GOVERNANCE RULE:
+    Held-out test set documents and test-split requirements are strictly sequestered
+    and cannot be loaded in the ordinary annotation workflow.
+
+    Raises:
+        PermissionError: If attempting to load a test-split file or all items belong to test split.
+    """
+    if not pool_path.exists():
+        return []
+
+    # Detect test documents from manifest if available
+    test_docs: set[str] = set()
+    if manifest_path and manifest_path.exists():
+        try:
+            m = json.loads(manifest_path.read_text(encoding="utf-8"))
+            test_docs = set(m.get("test_documents", []))
+        except Exception:
+            pass
+    elif (pool_path.parent / "sample_manifest.json").exists():
+        try:
+            m = json.loads((pool_path.parent / "sample_manifest.json").read_text(encoding="utf-8"))
+            test_docs = set(m.get("test_documents", []))
+        except Exception:
+            pass
+
+    # Reject explicit test pool file
+    if "test" in pool_path.stem.lower() and "dev" not in pool_path.stem.lower() and "pilot" not in pool_path.stem.lower():
+        raise PermissionError(
+            f"Access Denied: '{pool_path.name}' is part of the sequestered held-out test set "
+            "and cannot be loaded in the human annotation workflow per MASTER_SPEC.md Section 4."
+        )
+
+    raw_records: list[dict[str, Any]] = []
+    if pool_path.suffix.lower() == ".jsonl":
+        with open(pool_path, encoding="utf-8") as f:
+            for line in f:
+                line_str = line.strip()
+                if line_str:
+                    raw_records.append(json.loads(line_str))
+    elif pool_path.suffix.lower() == ".csv":
+        with open(pool_path, encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            seen: set[str] = set()
+            for row in reader:
+                req_id = row.get("req_id", "").strip()
+                if req_id and req_id not in seen:
+                    raw_records.append({
+                        "req_id": req_id,
+                        "doc_id": row.get("doc_id", ""),
+                        "text": row.get("text", ""),
+                        "source_file": row.get("notes", ""),
+                        "split": row.get("split", "dev"),
+                    })
+                    seen.add(req_id)
+
+    # Filter out any record belonging to the test split or test documents
+    allowed_records: list[dict[str, Any]] = []
+    for r in raw_records:
+        split = str(r.get("split", "")).lower()
+        doc_id = str(r.get("doc_id", ""))
+        if split == "test" or doc_id in test_docs:
+            continue
+        allowed_records.append(r)
+
+    if raw_records and not allowed_records:
+        raise PermissionError(
+            f"Access Denied: All requirements in '{pool_path.name}' belong to the held-out test set."
+        )
+
+    return allowed_records

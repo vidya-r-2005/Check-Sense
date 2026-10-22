@@ -146,30 +146,82 @@ def load_annotation_sheet(sheet_path: Path) -> dict[str, list[dict[str, str]]]:
 def compute_annotation_agreement(
     file_a: Path,
     file_b: Path,
+    expected_req_ids: set[str] | list[str] | None = None,
 ) -> dict[str, Any]:
     """Calculate comprehensive inter-rater reliability across two pilot sheets.
 
-    Evaluates:
-    - has_gap agreement (clean vs gap)
-    - gap_type agreement (ambiguity, incompleteness, implicit, clean)
-    - subtype agreement
-    - severity agreement (unweighted and quadratically weighted)
+    STRICT INTEGRITY ENFORCEMENT:
+    1. Rejects unverified annotations: every row in both files must have label_status='verified'.
+    2. Rejects incomplete pilot coverage: both files must contain matching ID sets,
+       matching expected_req_ids if provided. No silent intersection calculation.
+    3. Rejects invalid duplicate rows or clean/gap coexistence.
     """
     sheet_a = load_annotation_sheet(file_a)
     sheet_b = load_annotation_sheet(file_b)
 
-    common_req_ids = sorted(set(sheet_a.keys()) & set(sheet_b.keys()))
-    if not common_req_ids:
-        raise ValueError(
-            f"No overlapping req_ids between {file_a.name} ({len(sheet_a)} reqs) "
-            f"and {file_b.name} ({len(sheet_b)} reqs)."
-        )
+    if not sheet_a:
+        raise ValueError(f"Annotator file '{file_a.name}' contains no annotation rows.")
+    if not sheet_b:
+        raise ValueError(f"Annotator file '{file_b.name}' contains no annotation rows.")
+
+    set_a = set(sheet_a.keys())
+    set_b = set(sheet_b.keys())
+
+    if expected_req_ids is not None:
+        expected_set = set(expected_req_ids)
+        missing_a = expected_set - set_a
+        extra_a = set_a - expected_set
+        if missing_a or extra_a:
+            raise ValueError(
+                f"Coverage error in '{file_a.name}': expected {len(expected_set)} requirements, "
+                f"found {len(set_a)}. Missing={sorted(missing_a)}, Unexpected={sorted(extra_a)}"
+            )
+        missing_b = expected_set - set_b
+        extra_b = set_b - expected_set
+        if missing_b or extra_b:
+            raise ValueError(
+                f"Coverage error in '{file_b.name}': expected {len(expected_set)} requirements, "
+                f"found {len(set_b)}. Missing={sorted(missing_b)}, Unexpected={sorted(extra_b)}"
+            )
+    else:
+        if set_a != set_b:
+            missing_in_b = set_a - set_b
+            missing_in_a = set_b - set_a
+            raise ValueError(
+                f"Requirement ID mismatch between '{file_a.name}' ({len(set_a)} reqs) and '{file_b.name}' ({len(set_b)} reqs). "
+                f"Missing in {file_b.name}: {sorted(missing_in_b)}; Missing in {file_a.name}: {sorted(missing_in_a)}. "
+                "Per MASTER_SPEC.md, agreement cannot be computed on partial intersections."
+            )
+
+    common_req_ids = sorted(set_a)
+
+    # Validate label_status='verified' and duplicate structure for every requirement
+    for fname, sheet in [(file_a.name, sheet_a), (file_b.name, sheet_b)]:
+        for rid, rows in sheet.items():
+            for r in rows:
+                status = str(r.get("label_status", "")).strip().lower()
+                if status != "verified":
+                    raise ValueError(
+                        f"Unverified annotation rejected in '{fname}': requirement '{rid}' has label_status='{r.get('label_status')}'. "
+                        "Per MASTER_SPEC.md Rule 4, all annotations in inter-rater evaluation must be human-confirmed with label_status='verified'."
+                    )
+
+            has_cleans = [str(r.get("has_gap", "")).strip().lower() in ("0", "false") for r in rows]
+            has_gaps = [str(r.get("has_gap", "")).strip().lower() in ("1", "true") or bool(r.get("gap_type")) for r in rows]
+            if any(has_cleans) and any(has_gaps):
+                raise ValueError(
+                    f"Integrity violation in '{fname}': requirement '{rid}' has both clean (has_gap=0) and defective (has_gap=1) rows."
+                )
+            if any(has_cleans) and len(rows) > 1:
+                raise ValueError(
+                    f"Integrity violation in '{fname}': duplicate clean rows found for requirement '{rid}'."
+                )
 
     # 1. Binary has_gap alignment
     has_gap_a: list[int] = []
     has_gap_b: list[int] = []
 
-    # 2. Primary gap_type alignment (take primary or clean)
+    # 2. Gap type alignment (supports multi-gap canonical sets)
     type_a: list[str] = []
     type_b: list[str] = []
 
@@ -187,35 +239,45 @@ def compute_annotation_agreement(
         rows_a = sheet_a[req_id]
         rows_b = sheet_b[req_id]
 
-        # Determine has_gap
-        # has_gap is 1 if any row has has_gap == '1' or has gap_type
         is_gap_a = 1 if any(str(r.get("has_gap", "")).strip() in ("1", "true", "True") or r.get("gap_type") for r in rows_a) else 0
         is_gap_b = 1 if any(str(r.get("has_gap", "")).strip() in ("1", "true", "True") or r.get("gap_type") for r in rows_b) else 0
 
         has_gap_a.append(is_gap_a)
         has_gap_b.append(is_gap_b)
 
-        # Primary gap type (or 'clean')
-        gtype_a = rows_a[0].get("gap_type", "").strip().lower() if is_gap_a and rows_a[0].get("gap_type") else "clean"
-        gtype_b = rows_b[0].get("gap_type", "").strip().lower() if is_gap_b and rows_b[0].get("gap_type") else "clean"
+        # Multi-gap canonical representation
+        if is_gap_a:
+            types_set_a = sorted({r.get("gap_type", "").strip().lower() for r in rows_a if r.get("gap_type")})
+            subs_set_a = sorted({r.get("subtype", "").strip().lower() for r in rows_a if r.get("subtype")})
+            gtype_a = ",".join(types_set_a) if types_set_a else "clean"
+            gsub_a = ",".join(subs_set_a) if subs_set_a else "clean"
+        else:
+            gtype_a = "clean"
+            gsub_a = "clean"
+
+        if is_gap_b:
+            types_set_b = sorted({r.get("gap_type", "").strip().lower() for r in rows_b if r.get("gap_type")})
+            subs_set_b = sorted({r.get("subtype", "").strip().lower() for r in rows_b if r.get("subtype")})
+            gtype_b = ",".join(types_set_b) if types_set_b else "clean"
+            gsub_b = ",".join(subs_set_b) if subs_set_b else "clean"
+        else:
+            gtype_b = "clean"
+            gsub_b = "clean"
+
         type_a.append(gtype_a)
         type_b.append(gtype_b)
-
-        # Subtype
-        gsub_a = rows_a[0].get("subtype", "").strip().lower() if is_gap_a and rows_a[0].get("subtype") else "clean"
-        gsub_b = rows_b[0].get("subtype", "").strip().lower() if is_gap_b and rows_b[0].get("subtype") else "clean"
         sub_a.append(gsub_a)
         sub_b.append(gsub_b)
 
-        # Severity
         def parse_sev(r_list: list[dict[str, str]], is_gap: int) -> int:
             if not is_gap:
                 return 0
-            for r in r_list:
-                s_str = str(r.get("severity", "")).strip()
-                if s_str.isdigit():
-                    return int(s_str)
-            return 2  # Default moderate if unspecified
+            valid_sevs = [
+                int(r["severity"].strip())
+                for r in r_list
+                if str(r.get("severity", "")).strip().isdigit()
+            ]
+            return max(valid_sevs) if valid_sevs else 2
 
         s_a = parse_sev(rows_a, is_gap_a)
         s_b = parse_sev(rows_b, is_gap_b)
@@ -226,8 +288,8 @@ def compute_annotation_agreement(
             disagreements.append({
                 "req_id": req_id,
                 "text": rows_a[0].get("text", "")[:80] + "...",
-                "rater_a": {"has_gap": is_gap_a, "gap_type": gtype_a, "subtype": gsub_a, "severity": s_a},
-                "rater_b": {"has_gap": is_gap_b, "gap_type": gtype_b, "subtype": gsub_b, "severity": s_b},
+                "rater_a": {"has_gap": is_gap_a, "gap_type": gtype_a, "subtype": gsub_a, "severity": s_a, "n_gaps": len(rows_a)},
+                "rater_b": {"has_gap": is_gap_b, "gap_type": gtype_b, "subtype": gsub_b, "severity": s_b, "n_gaps": len(rows_b)},
             })
 
     kappa_has_gap = compute_cohens_kappa(has_gap_a, has_gap_b)

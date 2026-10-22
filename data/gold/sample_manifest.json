@@ -72,6 +72,8 @@
     "status": "PASSED (0 document overlap)"
   },
   "artifacts": {
+    "dev_pool": "data\\gold\\dev_pool.jsonl",
+    "test_pool_sequestered": "data\\gold\\test_pool.jsonl",
     "sample_pool": "data\\gold\\sample_pool.jsonl",
     "pilot_sample": "data\\gold\\pilot_sample.csv",
     "annotations_template": "data\\gold\\annotations_template.csv"

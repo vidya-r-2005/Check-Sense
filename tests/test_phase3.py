@@ -16,6 +16,8 @@ import json
 import py_compile
 from pathlib import Path
 
+import pytest
+
 from checksense import (
     compute_annotation_agreement,
     compute_cohens_kappa,
@@ -249,3 +251,294 @@ def test_streamlit_annotate_compilation():
     assert app_path.is_file()
     # Ensure file compiles cleanly to bytecode without syntax errors
     py_compile.compile(str(app_path), doraise=True)
+
+
+# ==============================================================================
+# Regression Tests for Targeted Annotation-Integrity Issues
+# ==============================================================================
+
+def test_held_out_test_set_sequestering(tmp_path: Path):
+    """Regression test: Held-out test set cannot be loaded in ordinary annotation workflow."""
+    from checksense import load_annotation_workflow_pool
+
+    interim_file = Path("data/interim/pure_requirements.jsonl")
+    manifest = sample_requirements(
+        input_file=interim_file,
+        output_dir=tmp_path,
+        n_samples=60,
+        n_documents=20,
+        seed=42,
+    )
+
+    test_pool_file = tmp_path / "test_pool.jsonl"
+    dev_pool_file = tmp_path / "dev_pool.jsonl"
+    manifest_file = tmp_path / "sample_manifest.json"
+
+    assert test_pool_file.is_file()
+    assert dev_pool_file.is_file()
+
+    # 1. Loading explicit test pool file must raise PermissionError
+    with pytest.raises(PermissionError) as exc_info:
+        load_annotation_workflow_pool(test_pool_file, manifest_path=manifest_file)
+    assert "sequestered" in str(exc_info.value).lower()
+
+    # 2. dev_pool.jsonl must contain ZERO test documents
+    test_docs = set(manifest["test_documents"])
+    dev_records = [json.loads(line) for line in dev_pool_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+    for r in dev_records:
+        assert r["split"] == "dev", f"Found test record in dev_pool: {r['req_id']}"
+        assert r["doc_id"] not in test_docs, f"Found test document in dev_pool: {r['doc_id']}"
+
+    # 3. Loading dev_pool through workflow must succeed
+    allowed = load_annotation_workflow_pool(dev_pool_file, manifest_path=manifest_file)
+    assert len(allowed) == len(dev_records)
+    for r in allowed:
+        assert r["doc_id"] not in test_docs
+
+
+def test_validation_span_and_question_rules():
+    """Regression test: Enforce span and question validation before verification."""
+    from checksense import validate_clarification_question, validate_gap_row
+
+    req_text = "The telemetry service shall store biometric user data in the database."
+
+    # 1. Empty span for ambiguity/incompleteness is rejected
+    errs_empty = validate_gap_row(
+        req_text,
+        {
+            "has_gap": "1",
+            "gap_type": "ambiguity",
+            "subtype": "vague_term",
+            "span_text": "",
+            "severity": "2",
+            "explanation": "Vague term.",
+            "question": "What is the threshold?",
+        },
+        for_verification=True,
+    )
+    assert any("span text is required" in e.lower() for e in errs_empty)
+
+    # 2. Span not in requirement is rejected
+    errs_missing = validate_gap_row(
+        req_text,
+        {
+            "has_gap": "1",
+            "gap_type": "ambiguity",
+            "subtype": "vague_term",
+            "span_text": "nonexistent_term_xyz",
+            "severity": "2",
+            "explanation": "Vague term.",
+            "question": "What is the threshold?",
+        },
+        for_verification=True,
+    )
+    assert any("not an exact substring" in e.lower() for e in errs_missing)
+
+    # 3. Question without question mark is rejected
+    errs_no_q = validate_clarification_question("What is the retention period")
+    assert any("must end with a question mark" in e.lower() for e in errs_no_q)
+
+    # 4. Question with multiple question marks (e.g. ?? or What? Why?) is rejected
+    errs_multi_q1 = validate_clarification_question("What is the retention period??")
+    assert any("exactly one question mark" in e.lower() for e in errs_multi_q1)
+
+    errs_multi_q2 = validate_clarification_question("Is it 5 days? Or 10 days?")
+    assert any("exactly one question mark" in e.lower() for e in errs_multi_q2)
+
+    # 5. Question with misplaced question mark is rejected
+    errs_misplaced = validate_clarification_question("What? is the retention period")
+    assert any("must end with a question mark" in e.lower() for e in errs_misplaced)
+
+    # 6. Valid span and valid question pass validation
+    errs_valid = validate_gap_row(
+        req_text,
+        {
+            "has_gap": "1",
+            "gap_type": "incompleteness",
+            "subtype": "missing_condition",
+            "span_text": "shall store",
+            "severity": "2",
+            "explanation": "Condition for storage is omitted.",
+            "question": "Under what condition shall the telemetry service store user data?",
+        },
+        for_verification=True,
+    )
+    assert len(errs_valid) == 0
+
+
+def test_inter_rater_agreement_hardening(tmp_path: Path):
+    """Regression test: Reject missing IDs, draft rows, and duplicate conflicting records."""
+    file_a = tmp_path / "rater_a.csv"
+    file_b = tmp_path / "rater_b.csv"
+
+    # Case A: Unverified / draft rows must be rejected
+    rows_draft_a = [
+        {"req_id": "REQ_01", "has_gap": "1", "gap_type": "ambiguity", "subtype": "vague_term", "severity": "2", "label_status": "draft"},
+        {"req_id": "REQ_02", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+    ]
+    rows_verified_b = [
+        {"req_id": "REQ_01", "has_gap": "1", "gap_type": "ambiguity", "subtype": "vague_term", "severity": "2", "label_status": "verified"},
+        {"req_id": "REQ_02", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+    ]
+
+    for p, rows in [(file_a, rows_draft_a), (file_b, rows_verified_b)]:
+        with open(p, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=ANNOTATION_COLUMNS)
+            w.writeheader()
+            for r in rows:
+                full = {c: r.get(c, "") for c in ANNOTATION_COLUMNS}
+                full["text"] = "Sample req"
+                w.writerow(full)
+
+    with pytest.raises(ValueError) as exc_info:
+        compute_annotation_agreement(file_a, file_b)
+    assert "unverified annotation rejected" in str(exc_info.value).lower()
+
+    # Case B: Incomplete ID coverage must be rejected (file A has REQ_01, file B has REQ_01 and REQ_02)
+    rows_verified_a_short = [
+        {"req_id": "REQ_01", "has_gap": "1", "gap_type": "ambiguity", "subtype": "vague_term", "severity": "2", "label_status": "verified"},
+    ]
+    with open(file_a, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=ANNOTATION_COLUMNS)
+        w.writeheader()
+        for r in rows_verified_a_short:
+            full = {c: r.get(c, "") for c in ANNOTATION_COLUMNS}
+            full["text"] = "Sample req"
+            w.writerow(full)
+
+    with pytest.raises(ValueError) as exc_info:
+        compute_annotation_agreement(file_a, file_b)
+    assert "mismatch" in str(exc_info.value).lower()
+
+    # Case C: Clean and gap coexistence for same ID must be rejected
+    rows_coexist = [
+        {"req_id": "REQ_01", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+        {"req_id": "REQ_01", "has_gap": "1", "gap_type": "ambiguity", "subtype": "vague_term", "severity": "2", "label_status": "verified"},
+        {"req_id": "REQ_02", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+    ]
+    with open(file_a, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=ANNOTATION_COLUMNS)
+        w.writeheader()
+        for r in rows_coexist:
+            full = {c: r.get(c, "") for c in ANNOTATION_COLUMNS}
+            full["text"] = "Sample req"
+            w.writerow(full)
+
+    with pytest.raises(ValueError) as exc_info:
+        compute_annotation_agreement(file_a, file_b)
+    assert "integrity violation" in str(exc_info.value).lower()
+
+    # Case D: Duplicate clean rows must be rejected
+    rows_dup_clean = [
+        {"req_id": "REQ_01", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+        {"req_id": "REQ_01", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+        {"req_id": "REQ_02", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+    ]
+    with open(file_a, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=ANNOTATION_COLUMNS)
+        w.writeheader()
+        for r in rows_dup_clean:
+            full = {c: r.get(c, "") for c in ANNOTATION_COLUMNS}
+            full["text"] = "Sample req"
+            w.writerow(full)
+
+    with pytest.raises(ValueError) as exc_info:
+        compute_annotation_agreement(file_a, file_b)
+    assert "duplicate clean rows" in str(exc_info.value).lower()
+
+    # Case E: Valid complete paired annotations
+    rows_valid_a = [
+        {"req_id": "REQ_01", "has_gap": "1", "gap_type": "ambiguity", "subtype": "vague_term", "severity": "2", "label_status": "verified"},
+        {"req_id": "REQ_02", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+    ]
+    with open(file_a, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=ANNOTATION_COLUMNS)
+        w.writeheader()
+        for r in rows_valid_a:
+            full = {c: r.get(c, "") for c in ANNOTATION_COLUMNS}
+            full["text"] = "Sample req"
+            w.writerow(full)
+
+    res = compute_annotation_agreement(file_a, file_b)
+    assert res["n_evaluated"] == 2
+    assert res["has_gap_kappa"]["observed_agreement"] == 1.0
+
+
+def test_multi_gap_preservation_and_coexistence(tmp_path: Path):
+    """Regression test: Saving multiple gaps preserves all rows and prohibits clean coexistence."""
+    from checksense import load_annotation_sheet, save_annotation_rows
+
+    csv_path = tmp_path / "test_annotations.csv"
+    req_text = "The user shall login rapidly and download records."
+
+    # 1. Save two distinct gaps for the same requirement
+    gap_rows = [
+        {
+            "req_id": "REQ_100",
+            "doc_id": "DOC_A",
+            "text": req_text,
+            "has_gap": "1",
+            "gap_type": "ambiguity",
+            "subtype": "vague_term",
+            "span_text": "rapidly",
+            "severity": "2",
+            "explanation": "Rapidly is unquantified.",
+            "question": "What is the maximum login latency in seconds?",
+            "label_status": "verified",
+        },
+        {
+            "req_id": "REQ_100",
+            "doc_id": "DOC_A",
+            "text": req_text,
+            "has_gap": "1",
+            "gap_type": "incompleteness",
+            "subtype": "missing_condition",
+            "span_text": "download records",
+            "severity": "2",
+            "explanation": "Condition for download permission is omitted.",
+            "question": "What authentication level is required to download records?",
+            "label_status": "verified",
+        },
+    ]
+
+    save_annotation_rows(csv_path, "REQ_100", gap_rows, req_text=req_text, for_verification=True)
+    sheet = load_annotation_sheet(csv_path)
+    assert len(sheet["REQ_100"]) == 2, "Both gap rows must be preserved in CSV"
+    assert sheet["REQ_100"][0]["subtype"] == "vague_term"
+    assert sheet["REQ_100"][1]["subtype"] == "missing_condition"
+
+    # 2. Attempting to save a clean row alongside a gap row must fail
+    invalid_coexisting = [
+        {
+            "req_id": "REQ_100",
+            "has_gap": "0",
+            "gap_type": "",
+            "subtype": "",
+            "label_status": "verified",
+        },
+        gap_rows[0],
+    ]
+    with pytest.raises(ValueError) as exc_info:
+        save_annotation_rows(csv_path, "REQ_100", invalid_coexisting, req_text=req_text, for_verification=True)
+    assert "integrity violation" in str(exc_info.value).lower()
+
+    # 3. Switching requirement to clean cleanly replaces previous gap rows
+    clean_replacement = [{
+        "req_id": "REQ_100",
+        "doc_id": "DOC_A",
+        "text": req_text,
+        "has_gap": "0",
+        "gap_type": "",
+        "subtype": "",
+        "span_text": "",
+        "severity": "",
+        "explanation": "",
+        "question": "",
+        "label_status": "verified",
+        "notes": "Verified as clean",
+    }]
+    save_annotation_rows(csv_path, "REQ_100", clean_replacement, req_text=req_text, for_verification=True)
+    sheet_updated = load_annotation_sheet(csv_path)
+    assert len(sheet_updated["REQ_100"]) == 1
+    assert sheet_updated["REQ_100"][0]["has_gap"] == "0"
+
