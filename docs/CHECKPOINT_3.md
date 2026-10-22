@@ -18,9 +18,9 @@ In strict compliance with Section 11 (Phase 3 Acceptance Criteria) of `MASTER_SP
 | **Streamlit Annotation Tool** | [app/annotate.py](../app/annotate.py) | **VERIFIED** | Multi-gap support, strict validation before verification, test split blocked from annotation |
 | **Annotation Integrity & Validation** | [src/checksense/annotation.py](../src/checksense/annotation.py) | **VERIFIED** | Enforces substring spans, single terminal `?`, clean exclusivity, multi-row schema |
 | **Annotation Guidelines** | [docs/annotation_guidelines.md](annotation_guidelines.md) | **VERIFIED** | 2–3 positive and negative examples per subtype across all 9 taxonomy categories; severity contract (1–3) |
-| **Inter-Rater Reliability Engine** | [src/checksense/agreement.py](../src/checksense/agreement.py) | **VERIFIED** | Requires verified rows, matching complete ID sets, rejects partial intersections and draft rows |
-| **CLI Subcommand Integration** | [src/checksense/cli.py](../src/checksense/cli.py) | **VERIFIED** | `sample`, `annotate-stats`, and `serve --app annotate` fully operational |
-| **Phase 3 Test Suite** | [tests/test_phase3.py](../tests/test_phase3.py) | **VERIFIED** | 17 comprehensive unit/regression tests covering splits, kappa math, schema, and all 4 review fixes |
+| **Inter-Rater Reliability Engine** | [src/checksense/agreement.py](../src/checksense/agreement.py) | **VERIFIED** | Requires verified rows, matches complete intended pilot ID set via canonical reference, rejects partial intersections |
+| **CLI Subcommand Integration** | [src/checksense/cli.py](../src/checksense/cli.py) | **VERIFIED** | `sample`, `annotate-stats` (with `--pilot-ref-file`), and `serve --app annotate` operational |
+| **Phase 3 Test Suite** | [tests/test_phase3.py](../tests/test_phase3.py) | **VERIFIED** | 18 comprehensive unit/regression tests covering splits, kappa math, schema, and all integrity review fixes |
 
 ---
 
@@ -98,8 +98,9 @@ Authored comprehensive guidelines containing 2–3 positive and negative example
 
 Implemented Cohen's $\kappa$ (Cohen 1960, 1968) supporting both unweighted multi-class agreement and quadratically weighted ordinal agreement for severity ratings:
 - **Strict Verification Gate:** Requires human-confirmed `label_status='verified'` for all evaluated rows; raises `ValueError` if any draft or unverified rows are present.
-- **Complete ID Matching:** Rejects partial intersections or missing IDs between raters. Both annotators must have annotated the exact same set of requirement IDs.
-- **Integrity Validation:** Prohibits duplicate clean records and clean/gap coexistence.
+- **Complete Pilot ID Coverage Validation:** Sourced from canonical `data/gold/pilot_sample.csv` or `--pilot-reference-file` via `load_pilot_expected_ids()`. Both annotators must cover 100% of the intended pilot requirement IDs. Partial intersections or identical incomplete subsets (e.g., both annotating only 20 of 50 requirements) are strictly rejected with `ValueError`.
+- **Reference Integrity:** If the pilot reference file is missing, unreadable, or invalid, the CLI and library fail clearly; neither silently falls back to comparing only the annotator files' common IDs.
+- **Integrity Validation:** Prohibits duplicate clean records and clean/gap coexistence. Supports multiple gap rows per requirement.
 - Interprets scores against the Landis & Koch (1977) benchmark.
 - Produces paired confusion matrices and isolates specific requirement disagreements to streamline reconciliation meetings.
 - Audits annotation queue progress via CLI:
@@ -129,17 +130,17 @@ rootdir: C:\Users\2005v\OneDrive\Desktop\CheckSense
 configfile: pyproject.toml
 testpaths: tests
 plugins: anyio-4.15.1, platformdirs-4.13.5
-collected 66 items
+collected 67 items
 
-tests\test_cli.py ................                                       [ 24%]
-tests\test_env.py ....                                                   [ 30%]
-tests\test_phase1.py ........                                            [ 42%]
-tests\test_phase2.py .....................                               [ 74%]
-tests\test_phase3.py .................                                   [100%]
+tests\test_cli.py ................                                       [ 23%]
+tests\test_env.py ....                                                   [ 29%]
+tests\test_phase1.py ........                                            [ 41%]
+tests\test_phase2.py .....................                               [ 73%]
+tests\test_phase3.py ..................                                  [100%]
 
-============================= 66 passed in 40.39s =============================
+============================= 67 passed in 34.96s =============================
 ```
-**Exit Code:** `0` (66 of 66 tests passing; 17 Phase 3 tests).
+**Exit Code:** `0` (67 of 67 tests passing; 18 Phase 3 tests).
 
 ### B. Ruff Code Quality & Lint Audit
 Executed `ruff check .`:

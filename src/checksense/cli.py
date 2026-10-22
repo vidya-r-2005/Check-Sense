@@ -162,6 +162,14 @@ def create_parser() -> argparse.ArgumentParser:
         default=None,
         help="Second annotator file for Cohen's kappa agreement.",
     )
+    p_annot.add_argument(
+        "--pilot-reference-file",
+        "--pilot-ref-file",
+        dest="pilot_reference_file",
+        type=Path,
+        default=Path("data/gold/pilot_sample.csv"),
+        help="Canonical pilot reference CSV containing complete intended pilot requirements (default: data/gold/pilot_sample.csv).",
+    )
     p_annot.set_defaults(func=_cmd_annotate_stats)
 
     # 5. train-smell
@@ -428,13 +436,34 @@ def _cmd_sample(args: argparse.Namespace) -> int:
 
 
 def _cmd_annotate_stats(args: argparse.Namespace) -> int:
-    from .agreement import compute_annotation_agreement, compute_dataset_annotation_stats
+    from .agreement import (
+        compute_annotation_agreement,
+        compute_dataset_annotation_stats,
+        load_pilot_expected_ids,
+    )
 
     print("[CheckSense CLI] 'annotate-stats' subcommand invoked.")
+    if bool(args.pilot_file_a) != bool(args.pilot_file_b):
+        print("[-] ERROR: Both --pilot-file-a and --pilot-file-b must be provided to compute agreement.")
+        return 1
+
     if args.pilot_file_a and args.pilot_file_b:
         print(f"Comparing Rater A ({args.pilot_file_a}) vs Rater B ({args.pilot_file_b})...")
+        ref_file = args.pilot_reference_file
+        print(f"Validating coverage against pilot reference file: {ref_file}...")
         try:
-            report = compute_annotation_agreement(args.pilot_file_a, args.pilot_file_b)
+            expected_ids = load_pilot_expected_ids(ref_file)
+        except Exception as e:
+            print(f"[-] ERROR loading pilot reference file '{ref_file}': {e}")
+            return 1
+
+        print(f"Loaded {len(expected_ids)} expected requirement IDs from pilot reference.")
+        try:
+            report = compute_annotation_agreement(
+                args.pilot_file_a,
+                args.pilot_file_b,
+                expected_req_ids=expected_ids,
+            )
             print("\n" + "=" * 60)
             print("CheckSense Inter-Rater Reliability (Cohen's Kappa)")
             print("=" * 60)

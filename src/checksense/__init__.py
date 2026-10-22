@@ -3,6 +3,7 @@ from .agreement import (
     compute_cohens_kappa,
     compute_dataset_annotation_stats,
     interpret_kappa,
+    load_pilot_expected_ids,
 )
 from .annotation import (
     ALL_SUBTYPES,
@@ -43,6 +44,7 @@ __all__ = [
     "interpret_kappa",
     "load_annotation_sheet",
     "load_annotation_workflow_pool",
+    "load_pilot_expected_ids",
     "partition_documents",
     "run_evaluation",
     "sample_requirements",

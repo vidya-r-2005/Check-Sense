@@ -23,6 +23,7 @@ from checksense import (
     compute_cohens_kappa,
     compute_dataset_annotation_stats,
     interpret_kappa,
+    load_pilot_expected_ids,
     partition_documents,
     sample_requirements,
 )
@@ -462,6 +463,128 @@ def test_inter_rater_agreement_hardening(tmp_path: Path):
     res = compute_annotation_agreement(file_a, file_b)
     assert res["n_evaluated"] == 2
     assert res["has_gap_kappa"]["observed_agreement"] == 1.0
+
+    # Case F: Two files with the SAME incomplete subset of the pilot must be rejected
+    expected_pilot_ids = ["REQ_01", "REQ_02", "REQ_03"]
+    with pytest.raises(ValueError) as exc_info:
+        compute_annotation_agreement(file_a, file_b, expected_req_ids=expected_pilot_ids)
+    assert "coverage error" in str(exc_info.value).lower()
+    assert "expected 3" in str(exc_info.value).lower()
+    assert "req_03" in str(exc_info.value).lower()
+
+    # Case G: pilot_reference_file loading and rejection of same incomplete subset
+    pilot_ref_csv = tmp_path / "pilot_ref.csv"
+    with open(pilot_ref_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["req_id", "doc_id", "text"])
+        w.writeheader()
+        for rid in expected_pilot_ids:
+            w.writerow({"req_id": rid, "doc_id": "DOC_1", "text": "Requirement text"})
+
+    with pytest.raises(ValueError) as exc_info:
+        compute_annotation_agreement(file_a, file_b, pilot_reference_file=pilot_ref_csv)
+    assert "coverage error" in str(exc_info.value).lower()
+
+    # Case H: Complete verified files matching pilot reference pass
+    rows_valid_full = [
+        {"req_id": "REQ_01", "has_gap": "1", "gap_type": "ambiguity", "subtype": "vague_term", "severity": "2", "label_status": "verified"},
+        {"req_id": "REQ_02", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+        {"req_id": "REQ_03", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+    ]
+    for p in (file_a, file_b):
+        with open(p, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=ANNOTATION_COLUMNS)
+            w.writeheader()
+            for r in rows_valid_full:
+                full = {c: r.get(c, "") for c in ANNOTATION_COLUMNS}
+                full["text"] = "Sample req"
+                w.writerow(full)
+
+    res_full = compute_annotation_agreement(file_a, file_b, pilot_reference_file=pilot_ref_csv)
+    assert res_full["n_evaluated"] == 3
+    assert res_full["has_gap_kappa"]["observed_agreement"] == 1.0
+
+
+def test_agreement_cli_pilot_reference_validation(tmp_path: Path):
+    """Regression test: CLI validates against complete pilot reference file and rejects partial subsets."""
+    pilot_ref = tmp_path / "cli_pilot_ref.csv"
+    with open(pilot_ref, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["req_id", "doc_id", "text"])
+        w.writeheader()
+        for rid in ["REQ_01", "REQ_02", "REQ_03"]:
+            w.writerow({"req_id": rid, "doc_id": "DOC_1", "text": "Req text"})
+
+    # 0. Test load_pilot_expected_ids directly
+    ids = load_pilot_expected_ids(pilot_ref)
+    assert ids == ["REQ_01", "REQ_02", "REQ_03"]
+
+    file_a = tmp_path / "cli_rater_a.csv"
+    file_b = tmp_path / "cli_rater_b.csv"
+
+    # 1. Incomplete pilot subset in both files (only REQ_01 and REQ_02)
+    incomplete_rows = [
+        {"req_id": "REQ_01", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+        {"req_id": "REQ_02", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+    ]
+    for p in (file_a, file_b):
+        with open(p, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=ANNOTATION_COLUMNS)
+            w.writeheader()
+            for r in incomplete_rows:
+                full = {c: r.get(c, "") for c in ANNOTATION_COLUMNS}
+                full["text"] = "Req text"
+                w.writerow(full)
+
+    rc_incomplete = main([
+        "annotate-stats",
+        "--pilot-file-a", str(file_a),
+        "--pilot-file-b", str(file_b),
+        "--pilot-ref-file", str(pilot_ref),
+    ])
+    assert rc_incomplete == 1
+
+    # 2. Missing reference file fails clearly
+    rc_missing_ref = main([
+        "annotate-stats",
+        "--pilot-file-a", str(file_a),
+        "--pilot-file-b", str(file_b),
+        "--pilot-ref-file", str(tmp_path / "nonexistent.csv"),
+    ])
+    assert rc_missing_ref == 1
+
+    # 3. Invalid reference file (missing req_id column) fails clearly
+    invalid_ref = tmp_path / "invalid_ref.csv"
+    with open(invalid_ref, "w", newline="", encoding="utf-8") as f:
+        f.write("wrong_col_a,wrong_col_b\n1,2\n")
+    rc_invalid_ref = main([
+        "annotate-stats",
+        "--pilot-file-a", str(file_a),
+        "--pilot-file-b", str(file_b),
+        "--pilot-ref-file", str(invalid_ref),
+    ])
+    assert rc_invalid_ref == 1
+
+    # 4. Complete, verified files matching pilot reference pass
+    complete_rows = [
+        {"req_id": "REQ_01", "has_gap": "1", "gap_type": "ambiguity", "subtype": "vague_term", "severity": "2", "label_status": "verified"},
+        {"req_id": "REQ_02", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+        {"req_id": "REQ_03", "has_gap": "0", "gap_type": "", "subtype": "", "severity": "", "label_status": "verified"},
+    ]
+    for p in (file_a, file_b):
+        with open(p, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=ANNOTATION_COLUMNS)
+            w.writeheader()
+            for r in complete_rows:
+                full = {c: r.get(c, "") for c in ANNOTATION_COLUMNS}
+                full["text"] = "Req text"
+                w.writerow(full)
+
+    rc_complete = main([
+        "annotate-stats",
+        "--pilot-file-a", str(file_a),
+        "--pilot-file-b", str(file_b),
+        "--pilot-ref-file", str(pilot_ref),
+    ])
+    assert rc_complete == 0
 
 
 def test_multi_gap_preservation_and_coexistence(tmp_path: Path):

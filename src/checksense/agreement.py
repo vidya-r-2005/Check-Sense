@@ -143,19 +143,75 @@ def load_annotation_sheet(sheet_path: Path) -> dict[str, list[dict[str, str]]]:
     return req_map
 
 
+def load_pilot_expected_ids(reference_file: Path | str) -> list[str]:
+    """Load the complete set of expected requirement IDs from a pilot reference CSV or JSONL.
+
+    Raises:
+        FileNotFoundError: If the reference file does not exist.
+        ValueError: If the file is unreadable, invalid, or contains 0 requirement IDs.
+    """
+    ref_path = Path(reference_file)
+    if not ref_path.exists():
+        raise FileNotFoundError(f"Pilot reference file not found: {ref_path}")
+    if not ref_path.is_file():
+        raise ValueError(f"Pilot reference path is not a file: {ref_path}")
+
+    expected_ids: list[str] = []
+    try:
+        if ref_path.suffix.lower() == ".jsonl":
+            import json
+
+            with open(ref_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    item = json.loads(line)
+                    rid = item.get("req_id")
+                    if rid and str(rid).strip():
+                        s_rid = str(rid).strip()
+                        if s_rid not in expected_ids:
+                            expected_ids.append(s_rid)
+        else:
+            with open(ref_path, encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                if reader.fieldnames is None or "req_id" not in reader.fieldnames:
+                    raise ValueError(
+                        f"Invalid pilot reference file '{ref_path.name}': missing required 'req_id' column."
+                    )
+                for row in reader:
+                    rid = row.get("req_id", "").strip()
+                    if rid and rid not in expected_ids:
+                        expected_ids.append(rid)
+    except Exception as e:
+        if isinstance(e, (FileNotFoundError, ValueError)):
+            raise
+        raise ValueError(f"Unreadable pilot reference file '{ref_path.name}': {e}") from e
+
+    if not expected_ids:
+        raise ValueError(f"Invalid pilot reference file '{ref_path.name}': contains 0 requirement IDs.")
+
+    return expected_ids
+
+
 def compute_annotation_agreement(
     file_a: Path,
     file_b: Path,
     expected_req_ids: set[str] | list[str] | None = None,
+    pilot_reference_file: Path | None = None,
 ) -> dict[str, Any]:
     """Calculate comprehensive inter-rater reliability across two pilot sheets.
 
     STRICT INTEGRITY ENFORCEMENT:
     1. Rejects unverified annotations: every row in both files must have label_status='verified'.
     2. Rejects incomplete pilot coverage: both files must contain matching ID sets,
-       matching expected_req_ids if provided. No silent intersection calculation.
+       matching expected_req_ids if provided (or loaded from pilot_reference_file).
+       No silent intersection calculation or partial coverage allowed.
     3. Rejects invalid duplicate rows or clean/gap coexistence.
     """
+    if expected_req_ids is None and pilot_reference_file is not None:
+        expected_req_ids = load_pilot_expected_ids(pilot_reference_file)
+
     sheet_a = load_annotation_sheet(file_a)
     sheet_b = load_annotation_sheet(file_b)
 
