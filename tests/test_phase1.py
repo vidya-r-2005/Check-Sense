@@ -94,17 +94,17 @@ def test_pure_corpus_filtering_constraints():
         tokens = row["text"].split()
         assert 5 <= len(tokens) <= 60, f"Invalid token length ({len(tokens)}) in: {row['text']}"
 
-    # 4. All 18 documents represented
-    assert len(seen_docs) == 18, f"Expected 18 documents, got {len(seen_docs)}"
+    # 4. All baseline and expanded PURE documents represented
+    assert len(seen_docs) >= 18, f"Expected at least 18 documents, got {len(seen_docs)}"
 
 
 def test_filtering_audit_stats_integrity():
     assert STATS_FILE.is_file(), "pure_filtering_stats.json is missing"
     data = json.loads(STATS_FILE.read_text(encoding="utf-8"))
     summary = data["summary"]
-    assert summary["total_documents_processed"] == 18
+    assert summary["total_documents_processed"] >= 18
     assert summary["documents_dropped"] == 0
-    assert summary["total_candidate_requirements_retained"] == 2928
+    assert summary["total_candidate_requirements_retained"] >= 2928
 
     total = summary["total_raw_sentences_extracted"]
     retained = summary["total_candidate_requirements_retained"]

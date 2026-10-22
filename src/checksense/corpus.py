@@ -72,24 +72,99 @@ def parse_pure_xml_file(xml_path: Path) -> tuple[str, list[str], set[str]]:
     return doc_id, doc_sentences, known_headings
 
 
+def parse_pure_html_file(html_path: Path) -> tuple[str, list[str], set[str]]:
+    """Parse a single PURE HTML specification document into raw sentences and headings."""
+    from bs4 import BeautifulSoup
+
+    doc_id = html_path.stem
+    content = html_path.read_text(encoding="utf-8", errors="ignore")
+    soup = BeautifulSoup(content, "html.parser")
+
+    known_headings = set()
+    for tag in soup.find_all(["title", "h1", "h2", "h3", "h4"]):
+        t = clean_whitespace(tag.get_text()).lower()
+        if t:
+            known_headings.add(t)
+
+    raw_sentences: list[str] = []
+    blocks = soup.find_all(["p", "li", "td", "dd"])
+    if blocks:
+        for block in blocks:
+            text = clean_whitespace(block.get_text())
+            if text:
+                raw_sentences.extend(split_into_sentences(text))
+    else:
+        text = clean_whitespace(soup.get_text())
+        if text:
+            raw_sentences.extend(split_into_sentences(text))
+
+    return doc_id, raw_sentences, known_headings
+
+
+def parse_pure_pdf_file(pdf_path: Path) -> tuple[str, list[str], set[str]]:
+    """Parse a single PURE PDF specification document into raw sentences and headings."""
+    import pypdf
+
+    doc_id = pdf_path.stem
+    reader = pypdf.PdfReader(pdf_path)
+    full_text_blocks: list[str] = []
+    known_headings: set[str] = set()
+
+    for page in reader.pages:
+        page_text = page.extract_text() or ""
+        for line in page_text.splitlines():
+            cleaned_line = clean_whitespace(line)
+            if not cleaned_line:
+                continue
+            if len(cleaned_line.split()) <= 4 and not cleaned_line.endswith((".", "!", "?", ";", ":")):
+                known_headings.add(cleaned_line.lower())
+            full_text_blocks.append(cleaned_line)
+
+    full_text = " ".join(full_text_blocks)
+    raw_sentences = split_into_sentences(full_text)
+    return doc_id, raw_sentences, known_headings
+
+
+EXTRA_PURE_TARGETS = [
+    "1999 - multi-mahjong.html",
+    "2005 - nenios.html",
+    "2001 - beyond.pdf",
+    "2001 - ctc network.pdf",
+    "2001 - elsfork.pdf",
+    "2001 - esa.pdf",
+    "2001 - hats.pdf",
+    "2002 - evla back.pdf",
+]
+
+
 def build_pure_corpus(
     input_dir: Path = Path("data/raw/pure/extracted/requirements-xml/XMLZIPFile"),
     output_file: Path = Path("data/interim/pure_requirements.jsonl"),
     stats_file: Path = Path("data/interim/pure_filtering_stats.json"),
     min_tokens: int = 5,
     max_tokens: int = 60,
+    include_extra_docs: bool = True,
+    extra_docs_dir: Path = Path("data/raw/pure/extracted/requirements/req"),
 ) -> dict[str, Any]:
-    """Parse all PURE documents, apply filters, and write interim JSONL."""
+    """Parse PURE documents (XML, HTML, PDF), apply filters, and write interim JSONL."""
     if not input_dir.exists():
         raise FileNotFoundError(f"Input directory does not exist: {input_dir}")
 
     # Discover XML files, ignoring macOS resource forks
-    xml_files = sorted([
-        f for f in input_dir.rglob("*.xml")
+    doc_paths: list[tuple[str, Path]] = [
+        ("xml", f) for f in sorted(input_dir.rglob("*.xml"))
         if "__MACOSX" not in f.parts and not f.name.startswith("._")
-    ])
-    if not xml_files:
+    ]
+    if not doc_paths:
         raise FileNotFoundError(f"No XML files found in {input_dir}")
+
+    # Add extra authentic PURE documents if enabled and available
+    if include_extra_docs and extra_docs_dir.exists():
+        for filename in EXTRA_PURE_TARGETS:
+            extra_file = extra_docs_dir / filename
+            if extra_file.is_file():
+                kind = "html" if extra_file.suffix.lower() == ".html" else "pdf"
+                doc_paths.append((kind, extra_file))
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     stats_file.parent.mkdir(parents=True, exist_ok=True)
@@ -105,8 +180,15 @@ def build_pure_corpus(
     per_doc_stats: dict[str, dict[str, int]] = {}
     corpus_rows: list[dict[str, Any]] = []
 
-    for xml_path in xml_files:
-        doc_id, sentences, headings = parse_pure_xml_file(xml_path)
+    for kind, doc_path in doc_paths:
+        if kind == "xml":
+            doc_id, sentences, headings = parse_pure_xml_file(doc_path)
+        elif kind == "html":
+            doc_id, sentences, headings = parse_pure_html_file(doc_path)
+        elif kind == "pdf":
+            doc_id, sentences, headings = parse_pure_pdf_file(doc_path)
+        else:
+            continue
         raw_count = len(sentences)
         total_extracted_sentences += raw_count
 
@@ -160,7 +242,7 @@ def build_pure_corpus(
                 "req_id": req_id,
                 "doc_id": doc_id,
                 "text": sentence,
-                "source_file": xml_path.name,
+                "source_file": doc_path.name,
                 "sent_idx": sent_idx,
                 "token_count": token_count,
             }
@@ -169,7 +251,7 @@ def build_pure_corpus(
             retained_requirements += 1
 
         per_doc_stats[doc_id] = {
-            "source_file": xml_path.name,
+            "source_file": doc_path.name,
             "raw_sentences": raw_count,
             "removed_duplicates": doc_dups,
             "removed_headings": doc_headings,
@@ -186,7 +268,7 @@ def build_pure_corpus(
 
     audit_stats: dict[str, Any] = {
         "summary": {
-            "total_documents_processed": len(xml_files),
+            "total_documents_processed": len(doc_paths),
             "documents_dropped": 0,
             "total_raw_sentences_extracted": total_extracted_sentences,
             "removed_duplicates": removed_duplicates,
@@ -209,7 +291,7 @@ def build_pure_corpus(
     print(f"\n{'='*60}")
     print("PURE Corpus Build Complete")
     print(f"{'='*60}")
-    print(f"Total documents processed: {len(xml_files)} (0 dropped)")
+    print(f"Total documents processed: {len(doc_paths)} (0 dropped)")
     print(f"Total raw sentences:        {total_extracted_sentences}")
     print(f"Removed duplicates:         {removed_duplicates}")
     print(f"Removed headings:           {removed_headings}")

@@ -1,15 +1,15 @@
 {
   "summary": {
-    "total_documents_processed": 18,
+    "total_documents_processed": 26,
     "documents_dropped": 0,
-    "total_raw_sentences_extracted": 7273,
-    "removed_duplicates": 408,
-    "removed_headings": 45,
-    "removed_no_modal_verb": 3749,
+    "total_raw_sentences_extracted": 13394,
+    "removed_duplicates": 1987,
+    "removed_headings": 393,
+    "removed_no_modal_verb": 6790,
     "removed_too_short_lt5": 0,
-    "removed_too_long_gt60": 143,
-    "total_candidate_requirements_retained": 2928,
-    "modal_filter_retention_rate": 0.4265
+    "removed_too_long_gt60": 201,
+    "total_candidate_requirements_retained": 4023,
+    "modal_filter_retention_rate": 0.3527
   },
   "per_document_breakdown": {
     "0000 - cctns": {
@@ -191,6 +191,86 @@
       "removed_too_short": 0,
       "removed_too_long": 0,
       "retained_requirements": 65
+    },
+    "1999 - multi-mahjong": {
+      "source_file": "1999 - multi-mahjong.html",
+      "raw_sentences": 1542,
+      "removed_duplicates": 692,
+      "removed_headings": 250,
+      "removed_no_modal": 328,
+      "removed_too_short": 0,
+      "removed_too_long": 6,
+      "retained_requirements": 266
+    },
+    "2005 - nenios": {
+      "source_file": "2005 - nenios.html",
+      "raw_sentences": 868,
+      "removed_duplicates": 551,
+      "removed_headings": 98,
+      "removed_no_modal": 77,
+      "removed_too_short": 0,
+      "removed_too_long": 0,
+      "retained_requirements": 142
+    },
+    "2001 - beyond": {
+      "source_file": "2001 - beyond.pdf",
+      "raw_sentences": 598,
+      "removed_duplicates": 23,
+      "removed_headings": 0,
+      "removed_no_modal": 485,
+      "removed_too_short": 0,
+      "removed_too_long": 3,
+      "retained_requirements": 87
+    },
+    "2001 - ctc network": {
+      "source_file": "2001 - ctc network.pdf",
+      "raw_sentences": 550,
+      "removed_duplicates": 88,
+      "removed_headings": 0,
+      "removed_no_modal": 369,
+      "removed_too_short": 0,
+      "removed_too_long": 3,
+      "retained_requirements": 90
+    },
+    "2001 - elsfork": {
+      "source_file": "2001 - elsfork.pdf",
+      "raw_sentences": 663,
+      "removed_duplicates": 11,
+      "removed_headings": 0,
+      "removed_no_modal": 531,
+      "removed_too_short": 0,
+      "removed_too_long": 9,
+      "retained_requirements": 112
+    },
+    "2001 - esa": {
+      "source_file": "2001 - esa.pdf",
+      "raw_sentences": 163,
+      "removed_duplicates": 0,
+      "removed_headings": 0,
+      "removed_no_modal": 101,
+      "removed_too_short": 0,
+      "removed_too_long": 6,
+      "retained_requirements": 56
+    },
+    "2001 - hats": {
+      "source_file": "2001 - hats.pdf",
+      "raw_sentences": 1431,
+      "removed_duplicates": 209,
+      "removed_headings": 0,
+      "removed_no_modal": 1007,
+      "removed_too_short": 0,
+      "removed_too_long": 30,
+      "retained_requirements": 185
+    },
+    "2002 - evla back": {
+      "source_file": "2002 - evla back.pdf",
+      "raw_sentences": 306,
+      "removed_duplicates": 5,
+      "removed_headings": 0,
+      "removed_no_modal": 143,
+      "removed_too_short": 0,
+      "removed_too_long": 1,
+      "retained_requirements": 157
     }
   }
 }

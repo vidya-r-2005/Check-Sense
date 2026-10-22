@@ -63,7 +63,7 @@ def test_subcommand_invocations(tmp_path: Path):
     """Verify default dispatching for skeleton commands."""
     assert main(["download", "--dataset", "pure"]) == 0
     assert main(["build-corpus"]) == 0
-    assert main(["sample", "--n-samples", "10"]) == 0
+    assert main(["sample", "--n-samples", "10", "--output-dir", str(tmp_path / "gold")]) == 0
     assert main(["annotate-stats"]) == 0
     assert main(["train-smell"]) == 0
     assert main(["train-span"]) == 0

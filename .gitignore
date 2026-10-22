@@ -50,6 +50,11 @@ data/interim/*.jsonl
 !data/interim/pure_filtering_stats.json
 data/processed/*
 !data/processed/.gitkeep
+data/gold/*.jsonl
+data/gold/*.csv
+!data/gold/.gitkeep
+!data/gold/sample_manifest.json
+!data/gold/annotations_template.csv
 
 # Models & weights (MASTER_SPEC.md: never commit model weights)
 models/*

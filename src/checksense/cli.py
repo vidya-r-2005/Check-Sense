@@ -397,17 +397,94 @@ def _cmd_build_corpus(args: argparse.Namespace) -> int:
 
 
 def _cmd_sample(args: argparse.Namespace) -> int:
+    from .sample import sample_requirements
+
     print(f"[CheckSense CLI] 'sample' subcommand invoked (n={args.n_samples}, seed={args.seed}).")
-    print(f"Output directory: {args.output_dir.resolve()}")
-    print("Status: Implementation is scheduled in Phase 3.")
-    return 0
+    print(f"Input: {args.input_file.resolve()} -> Output: {args.output_dir.resolve()}")
+    try:
+        manifest = sample_requirements(
+            input_file=args.input_file,
+            output_dir=args.output_dir,
+            n_samples=args.n_samples,
+            seed=args.seed,
+            held_out_ratio=args.held_out_ratio,
+        )
+        print("\n" + "=" * 60)
+        print("CheckSense Phase 3 Sampling Complete")
+        print("=" * 60)
+        print(f"Total Sampled:             {manifest['total_sampled']}")
+        print(f"Development Set:           {manifest['dev_count']} reqs ({manifest['dev_documents_count']} documents)")
+        print(f"Held-Out Test Set:         {manifest['test_count']} reqs ({manifest['test_documents_count']} documents)")
+        print(f"Held-Out Document Ratio:   {manifest['held_out_ratio_effective']:.1%}")
+        print(f"Pilot Double-Annotate:     {manifest['pilot_sample_size']} reqs")
+        print(f"Contamination Audit:       {manifest['contamination_audit']['status']}")
+        print(f"Sample Manifest:           {args.output_dir / 'sample_manifest.json'}")
+        print(f"Pilot Sample CSV:          {args.output_dir / 'pilot_sample.csv'}")
+        print("=" * 60 + "\n")
+        return 0
+    except Exception as e:
+        print(f"[-] ERROR sampling requirements: {e}")
+        return 1
 
 
 def _cmd_annotate_stats(args: argparse.Namespace) -> int:
+    from .agreement import compute_annotation_agreement, compute_dataset_annotation_stats
+
     print("[CheckSense CLI] 'annotate-stats' subcommand invoked.")
-    print(f"Gold file: {args.gold_file.resolve()}")
-    print("Status: Implementation is scheduled in Phase 3.")
-    return 0
+    if args.pilot_file_a and args.pilot_file_b:
+        print(f"Comparing Rater A ({args.pilot_file_a}) vs Rater B ({args.pilot_file_b})...")
+        try:
+            report = compute_annotation_agreement(args.pilot_file_a, args.pilot_file_b)
+            print("\n" + "=" * 60)
+            print("CheckSense Inter-Rater Reliability (Cohen's Kappa)")
+            print("=" * 60)
+            print(f"Evaluated Requirements:       {report['n_evaluated']}")
+            print(f"Binary has_gap Kappa:         {report['has_gap_kappa']['kappa']:.4f} ({report['has_gap_kappa']['interpretation']})")
+            print(f"Gap Type (3-Class + Clean):   {report['gap_type_kappa']['kappa']:.4f} ({report['gap_type_kappa']['interpretation']})")
+            print(f"Subtype Kappa:                {report['subtype_kappa']['kappa']:.4f} ({report['subtype_kappa']['interpretation']})")
+            print(f"Severity Kappa (Unweighted):  {report['severity_unweighted_kappa']['kappa']:.4f} ({report['severity_unweighted_kappa']['interpretation']})")
+            print(f"Severity Kappa (Quadratic W): {report['severity_quadratic_kappa']['kappa']:.4f} ({report['severity_quadratic_kappa']['interpretation']})")
+            print(f"Total Disagreements:          {report['n_disagreements']}")
+            print("=" * 60 + "\n")
+            return 0
+        except Exception as e:
+            print(f"[-] ERROR calculating agreement: {e}")
+            return 1
+
+    # Single gold file progress stats
+    print(f"Auditing annotation file: {args.gold_file.resolve()}...")
+    if not args.gold_file.exists():
+        print(f"[*] Annotation file not found: {args.gold_file.resolve()}")
+        print("    No human annotations recorded yet. Status: Human annotation queue initialized.")
+        return 0
+    try:
+        stats = compute_dataset_annotation_stats(args.gold_file)
+        print("\n" + "=" * 60)
+        print("CheckSense Annotation Progress & Verification Audit")
+        print("=" * 60)
+        print(f"Total Requirements:           {stats['total_requirements']}")
+        print(f"Verified (Human Confirmed):   {stats['verified_requirements']}")
+        print(f"Draft (Awaiting Verification):{stats['draft_requirements']}")
+        print(f"Unreviewed:                   {stats['unreviewed_requirements']}")
+        print(f"Clean Requirements:           {stats['clean_requirements']}")
+        print(f"Total Gaps Identified:        {stats['total_gaps_annotated']}")
+        print("-" * 60)
+        print("Gaps by Class:")
+        for k, v in stats["class_distribution"].items():
+            print(f"  {k:20s}: {v}")
+        print("-" * 60)
+        print("Gaps by Subtype:")
+        for k, v in stats["subtype_distribution"].items():
+            print(f"  {k:25s}: {v}")
+        print("-" * 60)
+        print("Gaps by Severity:")
+        for k, v in sorted(stats["severity_distribution"].items()):
+            print(f"  Severity {k}: {v}")
+        print("=" * 60 + "\n")
+        return 0
+    except Exception as e:
+        print(f"[-] ERROR auditing annotations: {e}")
+        return 1
 
 
 def _cmd_train_smell(args: argparse.Namespace) -> int:
@@ -507,11 +584,41 @@ def _cmd_report(args: argparse.Namespace) -> int:
 
 
 def _cmd_serve(args: argparse.Namespace) -> int:
+    import subprocess
+
     print(f"[CheckSense CLI] 'serve' subcommand invoked for app={args.app} on {args.host}:{args.port}.")
     target_app = "app/streamlit_app.py" if args.app == "main" else "app/annotate.py"
-    print(f"Target script: {target_app}")
-    print("Status: Implementation is scheduled in Phase 3 (annotate) and Phase 9 (main).")
-    return 0
+    target_path = Path(target_app)
+    if not target_path.exists():
+        phase_str = "Phase 9 (main analysis app)" if args.app == "main" else "Phase 3 (annotation app)"
+        print(f"[*] Target script '{target_app}' is scheduled for {phase_str}.")
+        return 0
+
+    print(f"[+] Target application: {target_app}")
+    # In automated test runners, avoid blocking on server execution
+    if "pytest" in sys.modules or getattr(args, "dry_run", False):
+        print("[CheckSense CLI] Test environment detected: skipping interactive Streamlit server launch.")
+        return 0
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        str(target_path),
+        "--server.port",
+        str(args.port),
+        "--server.address",
+        str(args.host),
+    ]
+    try:
+        return subprocess.call(cmd)
+    except KeyboardInterrupt:
+        print("\n[CheckSense CLI] Streamlit server stopped by user.")
+        return 0
+    except Exception as e:
+        print(f"[-] ERROR starting Streamlit server: {e}")
+        return 1
 
 
 def main(argv: Sequence[str] | None = None) -> int:

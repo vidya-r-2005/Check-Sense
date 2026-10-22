@@ -27,11 +27,11 @@ In accordance with Section 0.6 of `MASTER_SPEC.md`, module statuses are honestly
 | CLI Interface (`checksense.cli`) | Phase 0 | **working** | All 12 subcommands parsed and tested; download/build-corpus functional |
 | Environment Check Script | Phase 0 | **working** | `scripts/check_env.py` validates workspace and runtimes |
 | Dataset Acquisition & Verification | Phase 1 | **working** | PURE, ARTA, QuRE acquired and MD5-verified from Zenodo; logged in MANIFEST |
-| Interim PURE Corpus Builder | Phase 1 | **working** | 2,928 candidate requirements extracted from 18 real XML specs with audit stats |
+| Interim PURE Corpus Builder | Phase 1/3 | **working** | 4,023 candidate requirements extracted from 26 real PURE specs with audit stats |
 | Dependency Parser & Frame Extraction | Phase 2 | **working** | spaCy requirement frame parser (actor, modal, action, object, condition, quantity, exception) |
 | Baseline Rule Detector (B1) | Phase 2 | **working** | Lexicon & frame-slot heuristics across ambiguity, incompleteness, implicit |
 | Evaluation Module (Label-Status Gated) | Phase 2 | **working** | Strict gate refusing unverified labels; macro-F1, token Jaccard, ECE, PR-AUC |
-| Annotation Tooling (`app/annotate.py`) | Phase 3 | `todo` | Streamlit app for human verification |
+| Annotation Tooling (`app/annotate.py`) | Phase 3 | **working** | Streamlit app for human verification; seed 42 sampling (610 reqs / 26 docs); Cohen's kappa |
 | Smell Classifier (ARTA) | Phase 4 | `todo` | TF-IDF & SpanBERT sentence smell classifiers |
 | Span Tagger (SpanBERT) | Phase 4 | `todo` | BIO token span tagger trained on verified gold spans |
 | Completeness & Implicit Heads | Phase 4 | `todo` | Frame-slot rules, ontology, and ConceptNet |
