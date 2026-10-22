@@ -244,6 +244,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Gold annotation file with label_status.",
     )
     p_eval.add_argument(
+        "--predictions-file",
+        type=Path,
+        default=None,
+        help="Optional path to pre-generated predictions file (default: runs B1 baseline).",
+    )
+    p_eval.add_argument(
         "--output-dir",
         type=Path,
         default=Path("results/eval"),
@@ -426,10 +432,57 @@ def _cmd_train_fusion(args: argparse.Namespace) -> int:
 
 
 def _cmd_eval(args: argparse.Namespace) -> int:
+    from .eval import UnverifiedEvaluationError, run_evaluation
+
     print(f"[CheckSense CLI] 'eval' subcommand invoked (req_level={args.req_level}).")
     print(f"Gold annotations: {args.gold_file.resolve()}")
-    print("Status: Implementation is scheduled in Phase 2 & 8 (strict label_status verification).")
-    return 0
+    if args.predictions_file:
+        print(f"Predictions file: {args.predictions_file.resolve()}")
+    else:
+        print("Predictions: Running Baseline B1 (rules only)")
+
+    try:
+        report = run_evaluation(
+            gold_file=args.gold_file,
+            predictions_file=args.predictions_file,
+            output_dir=args.output_dir,
+            req_level=args.req_level,
+        )
+
+        print("\n" + "=" * 60)
+        print("CheckSense Evaluation Report")
+        print("=" * 60)
+        print(f"Evaluated Requirements:       {report.n_requirements}")
+        print(f"Clean Requirements (no gaps): {report.n_clean_requirements}")
+        print(f"Total Gold Gaps:              {report.n_gold_gaps}")
+        print(f"Total Predicted Gaps:         {report.n_pred_gaps}")
+        print(f"Matching Protocol:            {'Requirement-Level' if report.req_level else 'Token Span Jaccard (>=0.5)'}")
+        print("-" * 60)
+        print(f"Primary Metric (Macro-F1):    {report.macro_f1:.4f}")
+        print(f"Micro-F1:                     {report.micro_f1:.4f}")
+        print(f"Micro-F2:                     {report.micro_f2:.4f}")
+        print("-" * 60)
+        print("Per-Class Gap Metrics:")
+        for cname, cm in report.per_class.items():
+            print(f"  [{cname}] TP={cm.tp}, FP={cm.fp}, FN={cm.fn} | P={cm.precision:.4f}, R={cm.recall:.4f}, F1={cm.f1:.4f}")
+        print("-" * 60)
+        print(f"Requirement Has-Gap Accuracy: {report.has_gap_accuracy:.4f}")
+        print(f"Requirement Has-Gap PR-AUC:   {report.has_gap_pr_auc:.4f}")
+        print(f"False-Alarm Rate (Clean):     {report.false_alarm_rate_clean:.4f}")
+        print(f"Severity Spearman Rho:        {report.spearman_rho:.4f}")
+        print(f"Severity nDCG@3:              {report.ndcg_at_3:.4f}")
+        print(f"Expected Calibration Error:   {report.ece:.4f}")
+        print(f"Brier Score:                  {report.brier_score:.4f}")
+        print("=" * 60)
+        if args.output_dir:
+            print(f"[+] Evaluation artifacts saved to: {args.output_dir.resolve()}")
+        return 0
+    except UnverifiedEvaluationError as e:
+        print(f"\n[-] EVALUATION HALTED BY GATE:\n{e}")
+        return 2
+    except Exception as e:
+        print(f"\n[-] ERROR running evaluation: {e}")
+        return 1
 
 
 def _cmd_rate_make(args: argparse.Namespace) -> int:

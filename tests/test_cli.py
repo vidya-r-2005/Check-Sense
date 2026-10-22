@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from checksense import __version__
@@ -66,7 +68,8 @@ def test_subcommand_invocations():
     assert main(["train-smell"]) == 0
     assert main(["train-span"]) == 0
     assert main(["train-fusion"]) == 0
-    assert main(["eval"]) == 0
+    verified_fixture = Path(__file__).parent / "fixtures" / "verified_annotations.csv"
+    assert main(["eval", "--gold-file", str(verified_fixture)]) == 0
     assert main(["rate-make"]) == 0
     assert main(["rate-score", "--sheet-a", "dummy.csv"]) == 0
     assert main(["report"]) == 0

@@ -1,0 +1,5 @@
+req_id,doc_id,text,has_gap,gap_type,subtype,span_text,severity,explanation,question,stakeholder_answer,refined_text,annotator,label_status,notes
+REQ_TEST_001,DOC_01,The system shall quickly process user queries.,1,ambiguity,vague_term,quickly,2,Vague processing time,What is the maximum latency?,Under 200ms,The system shall process user queries in under 200 ms.,annotator_1,verified,human confirmed
+REQ_TEST_002,DOC_01,The data shall be archived.,1,incompleteness,missing_actor,archived,2,Missing responsible actor,Who archives the data?,The storage daemon,The storage daemon shall archive the data.,annotator_1,verified,human confirmed
+REQ_TEST_003,DOC_01,The system shall display the dashboard.,0,,,,,,,,,annotator_1,verified,clean requirement confirmed
+REQ_TEST_004,DOC_01,The client shall authenticate using password.,1,implicit,unstated_constraint,password,3,Implicit password security constraint,What encryption and lockout constraints apply?,Argon2id and 5 attempt lockout,The client shall authenticate using Argon2id encrypted password with a 5 attempt lockout.,annotator_1,verified,human confirmed

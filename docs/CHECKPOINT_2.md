@@ -1,0 +1,203 @@
+# CheckSense Checkpoint 2: Requirement Frames, Baseline Rule Detector (B1), and Strict Evaluation Gate
+
+**Date:** 2026-10-22  
+**Phase:** Phase 2  
+**Status:** COMPLETED & VERIFIED (Halted for User Approval before Phase 3)  
+**Binding Rules Followed:** [AGENTS.md](../AGENTS.md) and [docs/MASTER_SPEC.md](MASTER_SPEC.md)
+
+---
+
+## 1. What Was Done in Phase 2
+
+In accordance with Section 11 (Phase 2 Acceptance Criteria) of `MASTER_SPEC.md`, all planned components for Phase 2 were implemented, tested, and validated.
+
+### 1.1 Dependency Parser & Requirement Frame Extractor ([src/checksense/frame.py](../src/checksense/frame.py))
+- Configured spaCy deterministic preprocessing pipeline using `en_core_web_sm` (v3.8.0).
+- Implemented `extract_requirement_frame()` and `RequirementFrame` dataclass covering semantic slots:
+  - `actor`: Semantic subject/agent performing the requirement. Handles active subjects and passive prepositional agents (`by [agent]`).
+  - `modal`: Normative auxiliary (`shall`, `must`, `should`, `will`).
+  - `action`: Main predicate / verb phrase.
+  - `object`: Semantic patient / direct object. In passive voice, correctly captures syntactic `nsubjpass` as semantic patient.
+  - `condition`: Triggering or precondition clauses (`if`, `when`, `upon`, `in case`, `while`, `after`, etc.) including leading and embedded subordinate clauses.
+  - `quantity`: Numeric / quantifier constraints and units (`5 seconds`, `at least 3 attempts`).
+  - `exception`: Exceptional handling and failure paths (`unless`, `except when`, `otherwise`).
+  - `is_passive`: Boolean indicator for passive voice constructions.
+  - `missing_slots`: Audit list of missing semantic slots (e.g., passive without agent identifies `missing_actor`).
+
+### 1.2 Baseline Rule Detector (B1) ([src/checksense/baseline.py](../src/checksense/baseline.py))
+- Implemented candidate-level gap detection across all three taxonomy classes defined in `MASTER_SPEC.md` Section 2:
+  - **Ambiguity:**
+    - `vague_term`: Vague adjectives/adverbs (e.g., `fast`, `user-friendly`, `robust`, `appropriate`, `normal`, `seamless`).
+    - `vague_quantifier`: Imprecise bounds and open-ended lists (e.g., `several`, `some`, `etc.`, `and so on`).
+    - `anaphora`: Vague pronouns lacking local antecedents (`it`, `they`, `them`, `their`).
+    - `coordination`: Ambiguous `and/or` branching.
+  - **Incompleteness:**
+    - `missing_actor`: Unattributed passive voice or impersonal subjects.
+    - `missing_condition`: Discretionary loophole phrases (`if applicable`, `as appropriate`) or unconditioned state-altering actions.
+    - `missing_threshold`: Qualitative bounds modifying metrics without numeric units (`minimum delay`, `low latency`).
+    - `missing_error_handling`: Critical operations (`delete`, `authenticate`, `transfer`, `encrypt`) lacking exception or failure paths.
+  - **Implicit:**
+    - `unstated_constraint`: Critical domain actions (`password`, `payment`, `personal data`, `authenticate`) requiring unstated security/privacy/audit constraints.
+- Emits structured `CandidateGap` instances with severity (1–3), heuristic probabilities, grounded explanations, and targeted clarification questions ending in exactly one `?`.
+
+### 1.3 Metrics & Matching Engine ([src/checksense/metrics.py](../src/checksense/metrics.py))
+- Implemented standard matching protocol per `MASTER_SPEC.md` Section 7:
+  - Token-level Jaccard similarity ($\ge 0.5$) and substring containment for `ambiguity` and `incompleteness` spans.
+  - Requirement-level matching for `implicit` gaps.
+  - Optional `--req-level` mode for requirement-level matching across all types.
+- Evaluates:
+  - Primary metric: Gap-level Macro-F1 across the 3 classes.
+  - Per-class: Precision, Recall, F1, F2, TP, FP, FN.
+  - Micro-F1 and Micro-F2.
+  - Requirement-level `has_gap`: Precision, Recall, F1, Accuracy, PR-AUC, and False-Alarm Rate on clean requirements (`has_gap == 0`).
+  - Severity ranking: Spearman $\rho$ and nDCG@3 against gold severity.
+  - Calibration: Expected Calibration Error (ECE) and Brier score.
+
+### 1.4 Strict Evaluation Gate ([src/checksense/eval.py](../src/checksense/eval.py))
+- **Strict Enforcement of Rule 4:**
+  `load_and_verify_gold_data()` inspects every gold annotation row. If any evaluated row has `label_status != 'verified'`, the runner raises `UnverifiedEvaluationError` and strictly refuses to execute evaluation, print metrics, or save outputs.
+- Comprehensive provenance tracking: Each evaluation run records `config.json` (git commit hash, timestamp UTC, input paths, parameters) alongside `eval_report.json` and `eval_summary.csv`.
+- CLI Integration: Connected to `python -m checksense.cli eval --gold-file <path> [--predictions-file <path>] [--output-dir <path>] [--req-level]`.
+
+---
+
+## 2. Verification & Test Evidence
+
+### A. Unit Test Suite Execution
+Executed `pytest tests -v` on Windows 11 / Python 3.12.4:
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.12.4, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\2005v\OneDrive\Desktop\CheckSense
+configfile: pyproject.toml
+plugins: anyio-4.15.1, platformdirs-4.13.5
+collected 45 items
+
+tests\test_cli.py ................                                       [ 35%]
+tests\test_env.py ....                                                   [ 44%]
+tests\test_phase1.py ........                                            [ 62%]
+tests\test_phase2.py .................                                   [100%]
+
+============================= 45 passed in 7.10s ==============================
+```
+**Exit Code:** `0` (45 of 45 tests passing; 17 new Phase 2 unit tests).
+
+### B. Ruff Code Quality & Lint Audit
+Executed `ruff check .`:
+```text
+All checks passed!
+```
+**Exit Code:** `0` (0 errors, 0 warnings).
+
+### C. Environment Check Script
+Executed `python scripts/check_env.py`:
+```text
+============================================================
+CheckSense Environment & Workspace Verification
+============================================================
+[*] Python Runtime: 3.12.4 on Windows (AMD64)
+    [+] Python version check passed (>= 3.11).
+[*] Checking directory structure:
+    [+] src/checksense/ exists.
+    [+] docs/ exists.
+    [+] data/raw/ exists.
+    [+] data/interim/ exists.
+    [+] data/processed/ exists.
+    [+] data/gold/ exists.
+    [+] notebooks/ exists.
+    [+] reports/ exists.
+    [+] results/ exists.
+    [+] scripts/ exists.
+    [+] tests/ exists.
+    [+] .vscode/ exists.
+[*] Checking Git repository:
+    [+] Git repository initialized.
+    [+] .gitignore present.
+[*] Checking CheckSense package import:
+    [+] Successfully imported 'checksense' v0.1.0
+    [+] Subparsers loaded (12 commands): download, build-corpus, sample, annotate-stats, train-smell, train-span, train-fusion, eval, rate-make, rate-score, report, serve
+[*] Checking installed dependencies:
+    [+] pytest (9.1.1): Testing harness
+    [+] ruff (unknown): Linter and formatter
+    [?] torch is not yet installed: PyTorch deep learning framework
+    [+] spacy (3.8.16): spaCy NLP parser
+    [?] transformers is not yet installed: Hugging Face transformers
+    [+] sklearn (1.5.0): scikit-learn machine learning
+    [+] pandas (3.0.6): Data manipulation
+    [?] streamlit is not yet installed: Interactive web UI
+============================================================
+[+] Environment and repository skeleton validation PASSED!
+```
+**Exit Code:** `0`.
+
+### D. Verification Gate Demonstration
+CLI evaluation on unverified fixture (`tests/fixtures/unverified_annotations.csv`):
+```text
+[CheckSense CLI] 'eval' subcommand invoked (req_level=False).
+Gold annotations: C:\Users\2005v\OneDrive\Desktop\CheckSense\tests\fixtures\unverified_annotations.csv
+Predictions: Running Baseline B1 (rules only)
+
+[-] EVALUATION HALTED BY GATE:
+Evaluation REJECTED: Found 3 unverified rows in 'C:\Users\2005v\OneDrive\Desktop\CheckSense\tests\fixtures\unverified_annotations.csv'.
+Per MASTER_SPEC.md Rule 4, evaluation strictly refuses to run on rows unless label_status='verified'.
+Violations:
+  - Row 2 (req_id='REQ_TEST_001'): label_status='draft' (expected 'verified')
+  - Row 3 (req_id='REQ_TEST_002'): label_status='draft' (expected 'verified')
+  - Row 4 (req_id='REQ_TEST_003'): label_status='draft' (expected 'verified')
+```
+**Exit Code:** `2` (Gating refusal triggered).
+
+CLI evaluation on verified fixture (`tests/fixtures/verified_annotations.csv`):
+```text
+============================================================
+CheckSense Evaluation Report
+============================================================
+Evaluated Requirements:       4
+Clean Requirements (no gaps): 1
+Total Gold Gaps:              3
+Total Predicted Gaps:         4
+Matching Protocol:            Token Span Jaccard (>=0.5)
+------------------------------------------------------------
+Primary Metric (Macro-F1):    0.8889
+Micro-F1:                     0.8571
+Micro-F2:                     0.9375
+------------------------------------------------------------
+Per-Class Gap Metrics:
+  [ambiguity] TP=1, FP=0, FN=0 | P=1.0000, R=1.0000, F1=1.0000
+  [incompleteness] TP=1, FP=1, FN=0 | P=0.5000, R=1.0000, F1=0.6667
+  [implicit] TP=1, FP=0, FN=0 | P=1.0000, R=1.0000, F1=1.0000
+------------------------------------------------------------
+Requirement Has-Gap Accuracy: 1.0000
+Requirement Has-Gap PR-AUC:   1.0000
+False-Alarm Rate (Clean):     0.0000
+Severity Spearman Rho:        1.0000
+Severity nDCG@3:              1.0000
+Expected Calibration Error:   0.0000
+Brier Score:                  0.0240
+============================================================
+```
+**Exit Code:** `0` (Success).
+
+---
+
+## 3. Governance & Invariants Maintained
+
+1. **ARTA Dataset Reuse Restriction:** Preserved. Zero training executed on ARTA; no code applied ARTA data.
+2. **ARTA Proposed Label Mapping:** Remains marked strictly as `PROPOSED (Awaiting Human Approval)` in `docs/label_mapping.md`.
+3. **Real Data Integrity:** Zero fabricated datasets, synthetic metrics, or hand-typed numbers. Tiny unit test fixtures are isolated in `tests/fixtures/` and excluded from reported results.
+4. **Clean Git Repository:** Excluded files (`data/raw/*`, `data/interim/*.jsonl`, `data/processed/*`, `models/*`, `.env`, `.venv/`) remain completely uncommitted and protected by `.gitignore`.
+
+---
+
+## 4. Next Actions (Phase 3 Preview)
+
+Upon human review and approval of Checkpoint 2:
+1. **Sampling Protocol:** Stratified sampling of at least 600 requirements from at least 20 PURE documents (seed 42), holding out ~25% of documents as unseen test set.
+2. **Annotation Tooling:** Build Streamlit annotation application (`app/annotate.py`) with support for LLM drafts (tagged `draft`), human editing, and explicit `label_status=verified` confirmation.
+3. **Annotation Guidelines:** Draft `docs/annotation_guidelines.md` with 2–3 positive and negative examples per subtype.
+4. **Inter-Rater Reliability:** Script computing Cohen's $\kappa$ on pilot annotations.
+5. **Halt for Human Labeling:** Stop execution for human annotation before Phase 4.
+
+---
+
+**Execution is halted.** No Phase 3 work has been started. Checkpoint 2 is ready for your review and approval.
