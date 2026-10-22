@@ -59,7 +59,7 @@ def test_main_help():
     assert exc_info.value.code == 0
 
 
-def test_subcommand_invocations():
+def test_subcommand_invocations(tmp_path: Path):
     """Verify default dispatching for skeleton commands."""
     assert main(["download", "--dataset", "pure"]) == 0
     assert main(["build-corpus"]) == 0
@@ -69,7 +69,7 @@ def test_subcommand_invocations():
     assert main(["train-span"]) == 0
     assert main(["train-fusion"]) == 0
     verified_fixture = Path(__file__).parent / "fixtures" / "verified_annotations.csv"
-    assert main(["eval", "--gold-file", str(verified_fixture)]) == 0
+    assert main(["eval", "--gold-file", str(verified_fixture), "--output-dir", str(tmp_path / "eval")]) == 0
     assert main(["rate-make"]) == 0
     assert main(["rate-score", "--sheet-a", "dummy.csv"]) == 0
     assert main(["report"]) == 0
