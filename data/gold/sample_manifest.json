@@ -1,6 +1,6 @@
 {
   "seed": 42,
-  "n_samples_requested": 600,
+  "n_samples_requested": 50,
   "total_sampled": 610,
   "dev_count": 460,
   "test_count": 150,
