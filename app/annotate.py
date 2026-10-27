@@ -165,15 +165,40 @@ def main():
     st.info(f"**Text:** {req_text}")
 
     # Frame Extractor Analysis & Baseline Suggestions
-    
-    # Automated analysis temporarily disabled
-    rule_gaps = []
-    st.info("Automated analysis is temporarily disabled.")
+    with st.expander("🔬 Automated Analysis & Semantic Frames", expanded=False):
+        c_frame, c_b1 = st.columns(2)
+        with c_frame:
+            st.markdown("##### Extracted Semantic Frame (spaCy)")
+            frame = extract_requirement_frame(req_text)
+            st.json({
+                "actor": frame.actor,
+                "modal": frame.modal,
+                "action": frame.action,
+                "object": frame.object,
+                "condition": frame.condition,
+                "quantity": frame.quantity,
+                "exception": frame.exception,
+                "is_passive": frame.is_passive,
+                "missing_slots": frame.missing_slots,
+            })
+        with c_b1:
+            st.markdown("##### Baseline B1 Rule Suggestions (`[DRAFT]`)")
+            rule_gaps = detect_rule_gaps(req_text, frame=frame)
+            if rule_gaps:
+                for rg in rule_gaps:
+                    st.warning(
+                        f"**[DRAFT SUGGESTION]** `{rg.gap_type} / {rg.subtype}`\n\n"
+                        f"- **Span:** `\"{rg.span_text}\"`\n"
+                        f"- **Severity:** {rg.severity}\n"
+                        f"- **Explanation:** {rg.explanation}\n"
+                        f"- **Question:** {rg.question}"
+                    )
+            else:
+                st.success("No baseline rule gaps flagged.")
 
     # Human Annotation Form
     st.markdown("---")
     st.subheader("✍️ Human Annotation Editor")
-    st.success("DEBUG: Human annotation section reached.")
 
     # Determine whether current saved state is clean or has gaps
     is_currently_clean = (
