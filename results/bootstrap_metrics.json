@@ -1,0 +1,63 @@
+{
+  "n_requirements": 50,
+  "n_bootstrap": 1000,
+  "confidence_level": 0.95,
+  "metrics": {
+    "macro_f1": {
+      "point_estimate": 0.9032,
+      "bootstrap_mean": 0.854,
+      "std_error": 0.1219,
+      "ci_lower": 0.5402,
+      "ci_upper": 0.9573
+    },
+    "micro_f1": {
+      "point_estimate": 0.8966,
+      "bootstrap_mean": 0.8962,
+      "std_error": 0.035,
+      "ci_lower": 0.8247,
+      "ci_upper": 0.9583
+    },
+    "micro_f2": {
+      "point_estimate": 0.8553,
+      "bootstrap_mean": 0.8563,
+      "std_error": 0.0479,
+      "ci_lower": 0.7655,
+      "ci_upper": 0.9404
+    },
+    "has_gap_accuracy": {
+      "point_estimate": 0.94,
+      "bootstrap_mean": 0.9403,
+      "std_error": 0.0336,
+      "ci_lower": 0.8795,
+      "ci_upper": 1.0
+    },
+    "has_gap_pr_auc": {
+      "point_estimate": 0.9816,
+      "bootstrap_mean": 0.9816,
+      "std_error": 0.0115,
+      "ci_lower": 0.9561,
+      "ci_upper": 1.0
+    },
+    "false_alarm_rate_clean": {
+      "point_estimate": 0.0556,
+      "bootstrap_mean": 0.0562,
+      "std_error": 0.0546,
+      "ci_lower": 0.0,
+      "ci_upper": 0.182
+    },
+    "ece": {
+      "point_estimate": 0.0309,
+      "bootstrap_mean": 0.031,
+      "std_error": 0.0113,
+      "ci_lower": 0.012,
+      "ci_upper": 0.0555
+    },
+    "brier_score": {
+      "point_estimate": 0.0058,
+      "bootstrap_mean": 0.0059,
+      "std_error": 0.0032,
+      "ci_lower": 0.0006,
+      "ci_upper": 0.0129
+    }
+  }
+}

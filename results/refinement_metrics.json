@@ -1,0 +1,12 @@
+{
+  "n_records": 1,
+  "total_original_gaps": 1,
+  "total_closed_gaps": 0,
+  "gap_closure_rate": 0.0,
+  "total_new_gaps_introduced": 0,
+  "new_gap_rate_per_req": 0.0,
+  "numeric_preservation_rate": 1.0,
+  "iso_29148_mean_conformance_before": 0.75,
+  "iso_29148_mean_conformance_after": 0.75,
+  "iso_29148_relative_gain": 0.0
+}

@@ -16,6 +16,10 @@ from .annotation import (
     validate_requirement_annotations,
 )
 from .baseline import CandidateGap, detect_rule_gaps
+from .bootstrap import (
+    compute_bootstrap_confidence_intervals,
+    run_paired_bootstrap_test,
+)
 from .comparative import (
     compare_prompting_strategies,
     compare_question_formulation_strategies,
@@ -29,6 +33,11 @@ from .comparative import (
     run_comparative_benchmark,
 )
 from .eval import UnverifiedEvaluationError, run_evaluation
+from .eval_refinement import (
+    ISO29148Characteristics,
+    evaluate_iso_29148,
+    evaluate_refinement_suite,
+)
 from .frame import RequirementFrame, extract_requirement_frame
 from .fusion import (
     HeuristicFusionScorer,
@@ -52,12 +61,21 @@ from .llm import (
     get_default_llm_client,
 )
 from .metrics import EvaluationReport, evaluate_predictions
+from .rating import (
+    compute_inter_rater_agreement,
+    evaluate_question_ratings,
+    generate_blinded_rating_sheet,
+)
 from .refinement import (
     StakeholderAnswer,
     extract_numbers,
     refine_requirement,
     rule_based_refinement_edit,
     validate_numeric_preservation,
+)
+from .reporting import (
+    generate_error_analysis,
+    generate_final_report,
 )
 from .sample import (
     load_annotation_workflow_pool,
@@ -85,6 +103,7 @@ __all__ = [
     "CandidateGap",
     "EvaluationReport",
     "HeuristicFusionScorer",
+    "ISO29148Characteristics",
     "LLMClient",
     "LLMUnavailableError",
     "LinearSpanTagger",
@@ -102,8 +121,10 @@ __all__ = [
     "compare_prompting_strategies",
     "compare_question_formulation_strategies",
     "compute_annotation_agreement",
+    "compute_bootstrap_confidence_intervals",
     "compute_cohens_kappa",
     "compute_dataset_annotation_stats",
+    "compute_inter_rater_agreement",
     "deduplicate_and_rank_candidates",
     "detect_ablation_no_4a",
     "detect_ablation_no_4b",
@@ -114,10 +135,16 @@ __all__ = [
     "detect_b4_multi_llm_majority_gaps",
     "detect_rule_gaps",
     "enrich_candidates_with_questions",
+    "evaluate_iso_29148",
     "evaluate_predictions",
+    "evaluate_question_ratings",
+    "evaluate_refinement_suite",
     "extract_candidate_features",
     "extract_numbers",
     "extract_requirement_frame",
+    "generate_blinded_rating_sheet",
+    "generate_error_analysis",
+    "generate_final_report",
     "generate_gap_explanation_and_question",
     "get_default_llm_client",
     "get_template_explanation_and_question",
@@ -134,6 +161,7 @@ __all__ = [
     "rule_based_refinement_edit",
     "run_comparative_benchmark",
     "run_evaluation",
+    "run_paired_bootstrap_test",
     "run_phase4_heads",
     "sample_requirements",
     "save_annotation_rows",

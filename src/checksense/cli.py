@@ -21,9 +21,12 @@ Subcommands:
 from __future__ import annotations
 
 import argparse
+import csv
+import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from .version import __version__
 
@@ -344,10 +347,22 @@ def create_parser() -> argparse.ArgumentParser:
         help="Pipeline generation outputs.",
     )
     p_rmake.add_argument(
+        "--gold-file",
+        type=Path,
+        default=Path("data/gold/annotations/rater_1.csv"),
+        help="Path to verified gold annotations containing reference questions.",
+    )
+    p_rmake.add_argument(
         "--output-sheet",
         type=Path,
         default=Path("results/ratings/blinded_rating_sheet.csv"),
         help="Output CSV for human raters.",
+    )
+    p_rmake.add_argument(
+        "--key-file",
+        type=Path,
+        default=Path("results/ratings/blinding_key.json"),
+        help="Output path for evaluator unblinding key JSON.",
     )
     p_rmake.add_argument("--seed", type=int, default=42, help="Random seed for blinding.")
     p_rmake.set_defaults(func=_cmd_rate_make)
@@ -368,6 +383,18 @@ def create_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help="Second completed rating sheet CSV for inter-rater reliability.",
+    )
+    p_rscore.add_argument(
+        "--key-file",
+        type=Path,
+        default=Path("results/ratings/blinding_key.json"),
+        help="Path to blinding key JSON.",
+    )
+    p_rscore.add_argument(
+        "--margin",
+        type=float,
+        default=0.5,
+        help="Non-inferiority margin Delta (default: 0.5 per MASTER_SPEC.md).",
     )
     p_rscore.add_argument(
         "--output-dir",
@@ -723,35 +750,194 @@ def _cmd_eval(args: argparse.Namespace) -> int:
 
 
 def _cmd_rate_make(args: argparse.Namespace) -> int:
+    from .generation import get_template_explanation_and_question
+    from .rating import generate_blinded_rating_sheet
+
     print("[CheckSense CLI] 'rate-make' subcommand invoked.")
-    print(f"Output sheet: {args.output_sheet.resolve()}")
-    print("Status: Implementation is scheduled in Phase 8.")
+    candidate_items: list[dict[str, Any]] = []
+
+    # 1. Load predictions if provided
+    if args.test_results and args.test_results.exists():
+        print(f"Loading predictions from: {args.test_results.resolve()}")
+        with args.test_results.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    rec = json.loads(line)
+                    candidate_items.append(
+                        {
+                            "req_id": rec.get("req_id", "REQ"),
+                            "text": rec.get("text", ""),
+                            "question": rec.get("question", ""),
+                            "system_origin": rec.get("system", "checksense_pipeline"),
+                        }
+                    )
+
+    # 2. Load gold reference questions if available
+    gold_path = getattr(args, "gold_file", Path("data/gold/annotations/rater_1.csv"))
+    if gold_path.exists():
+        print(f"Loading reference questions from gold: {gold_path.resolve()}")
+        with gold_path.open("r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                q = str(row.get("question", "")).strip()
+                if q and q != "-":
+                    candidate_items.append(
+                        {
+                            "req_id": row.get("req_id", "REQ"),
+                            "text": row.get("text", ""),
+                            "question": q,
+                            "system_origin": "human_reference",
+                        }
+                    )
+                    # Add paired template question for evaluation
+                    g_type = row.get("gap_type", "ambiguity")
+                    s_type = row.get("subtype", "vague_term")
+                    span = row.get("span_text", "")
+                    _, tmpl_q = get_template_explanation_and_question(g_type, s_type, span)
+                    candidate_items.append(
+                        {
+                            "req_id": row.get("req_id", "REQ"),
+                            "text": row.get("text", ""),
+                            "question": tmpl_q,
+                            "system_origin": "template_strategy",
+                        }
+                    )
+
+    if not candidate_items:
+        print("[-] Error: No candidate items found to generate rating sheet.")
+        return 1
+
+    key_p = getattr(args, "key_file", args.output_sheet.parent / "blinding_key.json")
+    sheet_p, key_p = generate_blinded_rating_sheet(
+        candidate_items=candidate_items,
+        output_sheet_path=args.output_sheet,
+        key_output_path=key_p,
+        seed=args.seed,
+    )
+    print(f"[+] Blinded rating sheet generated: {sheet_p.resolve()} ({len(candidate_items)} items)")
+    print(f"[+] Evaluator unblinding key saved: {key_p.resolve()}")
     return 0
 
 
 def _cmd_rate_score(args: argparse.Namespace) -> int:
+    from .rating import evaluate_question_ratings
+
     print("[CheckSense CLI] 'rate-score' subcommand invoked.")
-    print(f"Input sheet: {args.sheet_a.resolve()}")
-    print("Status: Implementation is scheduled in Phase 8.")
-    return 0
+    if not args.sheet_a.exists():
+        print(f"[*] Rating sheet '{args.sheet_a}' not found. Provide completed sheets from human evaluators.")
+        return 0
+
+    key_p = getattr(args, "key_file", Path("results/ratings/blinding_key.json"))
+    if not key_p.exists():
+        print(f"[*] Blinding key not found: {key_p.resolve()}. Run 'rate-make' first to generate blinded sheets.")
+        return 0
+
+    sheets = [args.sheet_a]
+    if args.sheet_b and args.sheet_b.exists():
+        sheets.append(args.sheet_b)
+
+    try:
+        res = evaluate_question_ratings(
+            sheet_paths=sheets,
+            blinding_key_path=key_p,
+            margin=getattr(args, "margin", 0.5),
+        )
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        out_json = args.output_dir / "rating_scores.json"
+        with out_json.open("w", encoding="utf-8") as f:
+            json.dump(res, f, indent=2)
+        print(f"[+] Rating evaluation scores saved to: {out_json.resolve()}")
+        return 0
+    except Exception as e:
+        print(f"[-] Error evaluating rating sheets: {e}")
+        return 1
 
 
 def _cmd_report(args: argparse.Namespace) -> int:
+    from .bootstrap import compute_bootstrap_confidence_intervals
     from .comparative import run_comparative_benchmark
+    from .eval import generate_phase5_predictions, load_and_verify_gold_data
+    from .eval_refinement import evaluate_refinement_suite
+    from .reporting import generate_error_analysis, generate_final_report
 
-    print("[CheckSense CLI] 'report' subcommand invoked (Phase 7 Comparative Benchmarks & Ablations).")
+    print("[CheckSense CLI] 'report' subcommand invoked (Phase 8 Evaluation, Bootstrap & Reports).")
     print(f"Gold annotations: {args.gold_file.resolve()}")
     print(f"Summary destination: {args.summary_file.resolve()}")
 
     try:
+        # 1. Comparative summary benchmark (B1-B4, ablations, summary.csv)
         run_comparative_benchmark(
             gold_file=args.gold_file,
             output_summary_file=args.summary_file,
         )
-        print(f"\n[+] Comparative summary benchmark successfully generated at: {args.summary_file.resolve()}")
+        print(f"[+] Comparative summary benchmark successfully generated at: {args.summary_file.resolve()}")
+
+        # 2. 1,000-sample cluster bootstrap confidence intervals on pilot
+        gold_by_req = load_and_verify_gold_data(args.gold_file)
+        preds_by_req = generate_phase5_predictions(
+            req_gold=gold_by_req,
+            smell_model_path=Path("results/smell_classifier/smell_classifier.joblib"),
+            span_model_path=Path("results/span_tagger/span_tagger.joblib"),
+            fusion_model_path=Path("results/fusion_model/fusion_model.joblib"),
+        )
+
+        boot_res = compute_bootstrap_confidence_intervals(
+            req_predictions=preds_by_req,
+            req_gold=gold_by_req,
+            n_bootstrap=1000,
+            seed=42,
+        )
+        boot_path = Path("results/bootstrap_metrics.json")
+        boot_path.parent.mkdir(parents=True, exist_ok=True)
+        with boot_path.open("w", encoding="utf-8") as f:
+            json.dump(boot_res, f, indent=2)
+        print(f"[+] 1,000-sample bootstrap confidence intervals saved to: {boot_path.resolve()}")
+
+        # 3. Requirement refinement assessment
+        refined_records = []
+        with args.gold_file.open("r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                ref_t = str(row.get("refined_text", "")).strip()
+                if ref_t and ref_t != "-":
+                    refined_records.append(
+                        {
+                            "req_id": row.get("req_id", "REQ"),
+                            "original_text": row.get("text", ""),
+                            "stakeholder_answer": row.get("stakeholder_answer", ""),
+                            "refined_text": ref_t,
+                            "target_gap_type": row.get("gap_type", "ambiguity"),
+                            "target_subtype": row.get("subtype", "vague_term"),
+                        }
+                    )
+        ref_res = evaluate_refinement_suite(refined_records)
+        ref_path = Path("results/refinement_metrics.json")
+        with ref_path.open("w", encoding="utf-8") as f:
+            json.dump(ref_res, f, indent=2)
+        print(f"[+] Requirement refinement evaluation saved to: {ref_path.resolve()}")
+
+        # 4. Error analysis report
+        err_path = generate_error_analysis(
+            req_predictions=preds_by_req,
+            req_gold=gold_by_req,
+            output_path=Path("reports/error_analysis.md"),
+        )
+        print(f"[+] Comprehensive error analysis saved to: {err_path.resolve()}")
+
+        # 5. Final paper-style monograph report
+        final_path = generate_final_report(
+            summary_csv_path=args.summary_file,
+            comparative_metrics_path=Path("results/comparative_metrics.json"),
+            ablation_questions_path=Path("results/ablation_questions.json"),
+            bootstrap_metrics_path=boot_path,
+            refinement_metrics_path=ref_path,
+            output_path=Path("reports/final_report.md"),
+        )
+        print(f"[+] Final paper-style monograph report saved to: {final_path.resolve()}")
         return 0
     except Exception as e:
-        print(f"\n[-] ERROR generating comparative report: {e}")
+        print(f"\n[-] ERROR compiling reports: {e}")
         return 1
 
 

@@ -1,0 +1,476 @@
+{
+  "seed": 42,
+  "total_items": 94,
+  "key": {
+    "Q0001": {
+      "req_id": "2007-ertms_sent_0188",
+      "system_origin": "human_reference",
+      "original_question": "Which types of locations shall it be possible to define for speed increase relative to the front of the train?"
+    },
+    "Q0002": {
+      "req_id": "2005 - nenios_sent_0687",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'by date' in this context?"
+    },
+    "Q0003": {
+      "req_id": "2006 - eirene sys 15_sent_0517",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'a better grade of service' in this context?"
+    },
+    "Q0004": {
+      "req_id": "2006 - eirene sys 15_sent_0517",
+      "system_origin": "human_reference",
+      "original_question": "What criteria define normal network operating conditions, as opposed to conditions where access classes may be used?"
+    },
+    "Q0005": {
+      "req_id": "1999 - dii_sent_0046",
+      "system_origin": "template_strategy",
+      "original_question": "What error handling or rollback procedure occurs if the operation fails?"
+    },
+    "Q0006": {
+      "req_id": "1999 - dii_sent_0027",
+      "system_origin": "human_reference",
+      "original_question": "What criteria must determine how the XML services are segmented?"
+    },
+    "Q0007": {
+      "req_id": "0000 - cctns_sent_0019",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'appropriate' in this context?"
+    },
+    "Q0008": {
+      "req_id": "2006 - eirene sys 15_sent_0627",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0009": {
+      "req_id": "1995 - gemini_sent_0201",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'conceptual difference' in this context?"
+    },
+    "Q0010": {
+      "req_id": "2006 - eirene sys 15_sent_0517",
+      "system_origin": "human_reference",
+      "original_question": "What measurable service improvement shall eMLPP provide to certain users?"
+    },
+    "Q0011": {
+      "req_id": "1995 - gemini_sent_0753",
+      "system_origin": "template_strategy",
+      "original_question": "Under what concrete system states or triggering events is this action mandatory versus omitted?"
+    },
+    "Q0012": {
+      "req_id": "0000 - cctns_sent_0123",
+      "system_origin": "human_reference",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0013": {
+      "req_id": "2005 - microcare_sent_0167",
+      "system_origin": "human_reference",
+      "original_question": "What shall happen when the number of forms does not match the number of available forms?"
+    },
+    "Q0014": {
+      "req_id": "2007-ertms_sent_0188",
+      "system_origin": "template_strategy",
+      "original_question": "What is the maximum acceptable threshold and unit of measurement for 'speed increase'?"
+    },
+    "Q0015": {
+      "req_id": "2001 - esa_sent_0127",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0016": {
+      "req_id": "2009 - peppol approved_sent_0124",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'In the long-run' in this context?"
+    },
+    "Q0017": {
+      "req_id": "2001 - ctc network_sent_0518",
+      "system_origin": "template_strategy",
+      "original_question": "What specific security, privacy, or audit constraints govern this operation?"
+    },
+    "Q0018": {
+      "req_id": "2001 - beyond_sent_0553",
+      "system_origin": "template_strategy",
+      "original_question": "Under what concrete system states or triggering events is this action mandatory versus omitted?"
+    },
+    "Q0019": {
+      "req_id": "2008 - keepass_sent_0015",
+      "system_origin": "human_reference",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0020": {
+      "req_id": "1999 - dii_sent_0046",
+      "system_origin": "human_reference",
+      "original_question": "Whom shall the producer notify, and about which event?"
+    },
+    "Q0021": {
+      "req_id": "2005 - nenios_sent_0037",
+      "system_origin": "template_strategy",
+      "original_question": "Under what concrete system states or triggering events is this action mandatory versus omitted?"
+    },
+    "Q0022": {
+      "req_id": "2007-ertms_sent_0306",
+      "system_origin": "human_reference",
+      "original_question": "Which acknowledgement must be received before the driver can continue the movement?"
+    },
+    "Q0023": {
+      "req_id": "2001 - beyond_sent_0585",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0024": {
+      "req_id": "1999 - dii_sent_0046",
+      "system_origin": "human_reference",
+      "original_question": "What shall the producer do if the submission of metadata or artifacts to the registry fails or is rejected?"
+    },
+    "Q0025": {
+      "req_id": "2008 - keepass_sent_0131",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'perfectly' in this context?"
+    },
+    "Q0026": {
+      "req_id": "2006 - eirene sys 15_sent_0627",
+      "system_origin": "human_reference",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0027": {
+      "req_id": "2009 - peppol approved_sent_1224",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0028": {
+      "req_id": "0000 - cctns_sent_0096",
+      "system_origin": "human_reference",
+      "original_question": "What measurable length criterion defines when a document is too long for online reading?"
+    },
+    "Q0029": {
+      "req_id": "1999 - dii_sent_0169",
+      "system_origin": "template_strategy",
+      "original_question": "Under what concrete system states or triggering events is this action mandatory versus omitted?"
+    },
+    "Q0030": {
+      "req_id": "2008 - keepass_sent_0142",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific entity or component does 'Its' refer to in this requirement?"
+    },
+    "Q0031": {
+      "req_id": "2008 - keepass_sent_0131",
+      "system_origin": "human_reference",
+      "original_question": "What specific compatibility and functionality criteria must KeePass satisfy on older releases?"
+    },
+    "Q0032": {
+      "req_id": "2001 - beyond_sent_0585",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific entity or component does 'these' refer to in this requirement?"
+    },
+    "Q0033": {
+      "req_id": "2001 - beyond_sent_0585",
+      "system_origin": "human_reference",
+      "original_question": "Which system component or user role executes this requirement?"
+    },
+    "Q0034": {
+      "req_id": "2001 - beyond_sent_0553",
+      "system_origin": "human_reference",
+      "original_question": "What specific resolution must the participating warning systems agree upon and present to the pilot?"
+    },
+    "Q0035": {
+      "req_id": "2009 - video search_sent_0038",
+      "system_origin": "human_reference",
+      "original_question": "Which specific entity or component does 'They' refer to?"
+    },
+    "Q0036": {
+      "req_id": "2001 - esa_sent_0127",
+      "system_origin": "human_reference",
+      "original_question": "Which team or organization shall calibrate and validate the ASPERA-3 data and deposit it in the NASA PDS?"
+    },
+    "Q0037": {
+      "req_id": "2009 - video search_sent_0038",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific entity or component does 'They' refer to in this requirement?"
+    },
+    "Q0038": {
+      "req_id": "0000 - gamma j_sent_0115",
+      "system_origin": "human_reference",
+      "original_question": "What specific measurable threshold or technical standard defines 'clearly' in this context?"
+    },
+    "Q0039": {
+      "req_id": "1999 - dii_sent_0169",
+      "system_origin": "human_reference",
+      "original_question": "What criteria or time limit define when a dispute is considered unresolved and escalated to the COE Chief Engineer?"
+    },
+    "Q0040": {
+      "req_id": "1998 - themas_sent_0107",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific entity or component does 'it' refer to in this requirement?"
+    },
+    "Q0041": {
+      "req_id": "2001 - beyond_sent_0553",
+      "system_origin": "template_strategy",
+      "original_question": "What error handling or rollback procedure occurs if the operation fails?"
+    },
+    "Q0042": {
+      "req_id": "2001 - beyond_sent_0553",
+      "system_origin": "human_reference",
+      "original_question": "Under what condition shall the auditory warning be presented to the pilot?"
+    },
+    "Q0043": {
+      "req_id": "1995 - gemini_sent_0753",
+      "system_origin": "human_reference",
+      "original_question": "What is the maximum duration for which engineering data must be logged at rates up to 200 Hz?"
+    },
+    "Q0044": {
+      "req_id": "2006 - eirene sys 15_sent_0517",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'normal network operating conditions' in this context?"
+    },
+    "Q0045": {
+      "req_id": "2007-ertms_sent_0188",
+      "system_origin": "human_reference",
+      "original_question": "What speed value or amount of increase shall apply at a defined location?"
+    },
+    "Q0046": {
+      "req_id": "2005 - nenios_sent_0360",
+      "system_origin": "human_reference",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0047": {
+      "req_id": "0000 - cctns_sent_0096",
+      "system_origin": "template_strategy",
+      "original_question": "What is the complete enumeration or exact numerical bound intended by 'several pages'?"
+    },
+    "Q0048": {
+      "req_id": "1999 - dii_sent_0072",
+      "system_origin": "human_reference",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0049": {
+      "req_id": "2008 - keepass_sent_0015",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0050": {
+      "req_id": "2001 - beyond_sent_0585",
+      "system_origin": "human_reference",
+      "original_question": "Which specific entity or component does 'these' refer to?"
+    },
+    "Q0051": {
+      "req_id": "0000 - cctns_sent_0093",
+      "system_origin": "human_reference",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0052": {
+      "req_id": "1995 - gemini_sent_0753",
+      "system_origin": "human_reference",
+      "original_question": "Which specific entity or component does 'It' refer to?"
+    },
+    "Q0053": {
+      "req_id": "2001 - beyond_sent_0553",
+      "system_origin": "human_reference",
+      "original_question": "What shall the auditory warning present if the participating warning systems fail to agree on a resolution?"
+    },
+    "Q0054": {
+      "req_id": "2006 - eirene sys 15_sent_0517",
+      "system_origin": "template_strategy",
+      "original_question": "What is the complete enumeration or exact numerical bound intended by 'certain users'?"
+    },
+    "Q0055": {
+      "req_id": "1998 - themas_sent_0107",
+      "system_origin": "human_reference",
+      "original_question": "Which specific entity or component does 'it' refer to?"
+    },
+    "Q0056": {
+      "req_id": "2005 - nenios_sent_0687",
+      "system_origin": "human_reference",
+      "original_question": "How shall the account activity be organized by date: sorted, grouped, or limited to a date range?"
+    },
+    "Q0057": {
+      "req_id": "1998 - themas_sent_0107",
+      "system_origin": "human_reference",
+      "original_question": "Which specific entity or component does 'This' refer to?"
+    },
+    "Q0058": {
+      "req_id": "0000 - cctns_sent_0096",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0059": {
+      "req_id": "0000 - cctns_sent_0096",
+      "system_origin": "human_reference",
+      "original_question": "What is the complete enumeration or exact numerical bound intended by 'several'?"
+    },
+    "Q0060": {
+      "req_id": "1998 - themas_sent_0104",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'reasonable' in this context?"
+    },
+    "Q0061": {
+      "req_id": "2001 - ctc network_sent_0518",
+      "system_origin": "human_reference",
+      "original_question": "Is this deletion soft or hard, and what confirmation or recovery period is required?"
+    },
+    "Q0062": {
+      "req_id": "2009 - peppol approved_sent_0124",
+      "system_origin": "human_reference",
+      "original_question": "Within what specific timeframe must the VCD fulfil the contracting authorities\u2019 needs?"
+    },
+    "Q0063": {
+      "req_id": "0000 - cctns_sent_0096",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'too long' in this context?"
+    },
+    "Q0064": {
+      "req_id": "2007 - get real 0.2_sent_0091",
+      "system_origin": "human_reference",
+      "original_question": "Which specific copyright and security measures of the OUS site shall Get Real implement?"
+    },
+    "Q0065": {
+      "req_id": "2001 - beyond_sent_0553",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'resolution' in this context?"
+    },
+    "Q0066": {
+      "req_id": "2008 - keepass_sent_0142",
+      "system_origin": "human_reference",
+      "original_question": "Which specific entity or component does 'Its' refer to?"
+    },
+    "Q0067": {
+      "req_id": "1998 - themas_sent_0104",
+      "system_origin": "human_reference",
+      "original_question": "What specific measurable threshold or technical standard defines 'reasonable' in this context?"
+    },
+    "Q0068": {
+      "req_id": "0000 - cctns_sent_0019",
+      "system_origin": "human_reference",
+      "original_question": "What specific measurable threshold or technical standard defines 'appropriate' in this context?"
+    },
+    "Q0069": {
+      "req_id": "2009 - peppol approved_sent_1224",
+      "system_origin": "human_reference",
+      "original_question": "Which specific entity or component does 'It' refer to?"
+    },
+    "Q0070": {
+      "req_id": "2005 - nenios_sent_0360",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0071": {
+      "req_id": "2009 - peppol approved_sent_1224",
+      "system_origin": "human_reference",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0072": {
+      "req_id": "2005 - microcare_sent_0167",
+      "system_origin": "template_strategy",
+      "original_question": "What error handling or rollback procedure occurs if the operation fails?"
+    },
+    "Q0073": {
+      "req_id": "2009 - peppol approved_sent_0124",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'adequately' in this context?"
+    },
+    "Q0074": {
+      "req_id": "1998 - themas_sent_0107",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific entity or component does 'This' refer to in this requirement?"
+    },
+    "Q0075": {
+      "req_id": "2007-ertms_sent_0188",
+      "system_origin": "template_strategy",
+      "original_question": "What is the complete enumeration or exact numerical bound intended by 'certain locations'?"
+    },
+    "Q0076": {
+      "req_id": "2008 - keepass_sent_0142",
+      "system_origin": "human_reference",
+      "original_question": "How should passwords be encrypted, salted, or validated against complexity rules?"
+    },
+    "Q0077": {
+      "req_id": "2006 - eirene sys 15_sent_0517",
+      "system_origin": "human_reference",
+      "original_question": "Which users or user groups shall receive the better grade of service provided by eMLPP?"
+    },
+    "Q0078": {
+      "req_id": "1999 - dii_sent_0046",
+      "system_origin": "template_strategy",
+      "original_question": "What is the complete enumeration or exact numerical bound intended by 'related information resource artifacts'?"
+    },
+    "Q0079": {
+      "req_id": "1999 - dii_sent_0027",
+      "system_origin": "template_strategy",
+      "original_question": "Under what concrete system states or triggering events is this action mandatory versus omitted?"
+    },
+    "Q0080": {
+      "req_id": "2009 - peppol approved_sent_0124",
+      "system_origin": "human_reference",
+      "original_question": "What specific measurable threshold or technical standard defines 'adequately' in this context?"
+    },
+    "Q0081": {
+      "req_id": "2009 - peppol approved_sent_1224",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific entity or component does 'It' refer to in this requirement?"
+    },
+    "Q0082": {
+      "req_id": "0000 - cctns_sent_0096",
+      "system_origin": "human_reference",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0083": {
+      "req_id": "2005 - nenios_sent_0037",
+      "system_origin": "human_reference",
+      "original_question": "What scheduled time and grace period define a late pick-up?"
+    },
+    "Q0084": {
+      "req_id": "2007-ertms_sent_0306",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'the acknowledgement' in this context?"
+    },
+    "Q0085": {
+      "req_id": "0000 - cctns_sent_0123",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0086": {
+      "req_id": "2007 - get real 0.2_sent_0091",
+      "system_origin": "template_strategy",
+      "original_question": "What is the complete enumeration or exact numerical bound intended by 'other security measures'?"
+    },
+    "Q0087": {
+      "req_id": "0000 - gamma j_sent_0115",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'clearly' in this context?"
+    },
+    "Q0088": {
+      "req_id": "1995 - gemini_sent_0753",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific entity or component does 'It' refer to in this requirement?"
+    },
+    "Q0089": {
+      "req_id": "1999 - dii_sent_0046",
+      "system_origin": "human_reference",
+      "original_question": "Which specific information resource artifacts shall the producer submit along with the metadata?"
+    },
+    "Q0090": {
+      "req_id": "1999 - dii_sent_0046",
+      "system_origin": "template_strategy",
+      "original_question": "What specific measurable threshold or technical standard defines 'notify' in this context?"
+    },
+    "Q0091": {
+      "req_id": "1999 - dii_sent_0072",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0092": {
+      "req_id": "0000 - cctns_sent_0093",
+      "system_origin": "template_strategy",
+      "original_question": "Which specific component, role, or user is responsible for performing this action?"
+    },
+    "Q0093": {
+      "req_id": "1995 - gemini_sent_0201",
+      "system_origin": "human_reference",
+      "original_question": "Which specific aspects of software behavior or interface shall be identical between on-site and remote operation?"
+    },
+    "Q0094": {
+      "req_id": "2008 - keepass_sent_0142",
+      "system_origin": "template_strategy",
+      "original_question": "What specific security, privacy, or audit constraints govern this operation?"
+    }
+  }
+}
