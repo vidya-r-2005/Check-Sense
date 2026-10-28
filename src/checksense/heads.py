@@ -133,6 +133,9 @@ class Phase4Pipeline:
         doc_context: str | None = None,
     ) -> list[CandidateGap]:
         """Execute Heads 4a, 4b, and 4c and return union of candidate gaps."""
+        if not text or not text.strip():
+            return []
+
         if frame is None:
             frame = extract_requirement_frame(text)
 
