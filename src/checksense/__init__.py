@@ -25,8 +25,28 @@ from .fusion import (
     extract_candidate_features,
     train_and_cross_validate_fusion_scorer,
 )
+from .generation import (
+    enrich_candidates_with_questions,
+    generate_gap_explanation_and_question,
+    get_template_explanation_and_question,
+    validate_generation_output,
+)
 from .heads import Phase4Pipeline, run_phase4_heads
+from .llm import (
+    LLMClient,
+    LLMUnavailableError,
+    MockLLMClient,
+    OllamaClient,
+    get_default_llm_client,
+)
 from .metrics import EvaluationReport, evaluate_predictions
+from .refinement import (
+    StakeholderAnswer,
+    extract_numbers,
+    refine_requirement,
+    rule_based_refinement_edit,
+    validate_numeric_preservation,
+)
 from .sample import (
     load_annotation_workflow_pool,
     partition_documents,
@@ -53,10 +73,15 @@ __all__ = [
     "CandidateGap",
     "EvaluationReport",
     "HeuristicFusionScorer",
+    "LLMClient",
+    "LLMUnavailableError",
     "LinearSpanTagger",
     "MLPFusionScorer",
+    "MockLLMClient",
+    "OllamaClient",
     "Phase4Pipeline",
     "RequirementFrame",
+    "StakeholderAnswer",
     "TAXONOMY",
     "TfidfSmellClassifier",
     "UnverifiedEvaluationError",
@@ -67,9 +92,14 @@ __all__ = [
     "compute_dataset_annotation_stats",
     "deduplicate_and_rank_candidates",
     "detect_rule_gaps",
+    "enrich_candidates_with_questions",
     "evaluate_predictions",
     "extract_candidate_features",
+    "extract_numbers",
     "extract_requirement_frame",
+    "generate_gap_explanation_and_question",
+    "get_default_llm_client",
+    "get_template_explanation_and_question",
     "interpret_kappa",
     "load_annotation_sheet",
     "load_annotation_workflow_pool",
@@ -79,6 +109,8 @@ __all__ = [
     "load_provisional_pilot_dataset",
     "load_qure_dataset",
     "partition_documents",
+    "refine_requirement",
+    "rule_based_refinement_edit",
     "run_evaluation",
     "run_phase4_heads",
     "sample_requirements",
@@ -88,5 +120,7 @@ __all__ = [
     "train_and_evaluate_span_tagger",
     "validate_clarification_question",
     "validate_gap_row",
+    "validate_generation_output",
+    "validate_numeric_preservation",
     "validate_requirement_annotations",
 ]
