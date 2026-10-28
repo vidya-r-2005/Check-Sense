@@ -38,7 +38,7 @@ In accordance with Section 0.6 of `MASTER_SPEC.md`, module statuses are honestly
 | Candidate-Level Fusion & Scorer | Phase 5 | **working** | Candidate-level MLP & heuristic fallback, overlap deduplication, deterministic ranking, Grouped-CV |
 | Question & Explanation Generation | Phase 6 | **working** | Grounded local LLM (`qwen2.5:7b`), strict JSON validation, deterministic template fallback |
 | Requirement Refinement Engine | Phase 6 | **working** | Stakeholder answer integration, strict numeric preservation guardrails, rule edit fallback |
-| Comparative Baselines (B2-B4) | Phase 7 | `todo` | Span tagger alone, zero-shot LLM, multi-LLM majority |
+| Comparative Baselines (B2-B4) & Ablations | Phase 7 | **working** | B1-B4, head ablations, plain union, template/LLM & prompt comparisons; one command reproduces results/summary.csv |
 | Streamlit Application (`app/streamlit_app.py`) | Phase 9 | `todo` | End-to-end interactive SRS analysis & refinement |
 
 ---

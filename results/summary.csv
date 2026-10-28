@@ -1,0 +1,11 @@
+system,type,macro_f1,micro_f1,micro_f2,ambiguity_f1,incompleteness_f1,implicit_f1,has_gap_accuracy,clean_false_alarm_rate,n_predicted_gaps,status
+B1_rules,baseline,0.7006,0.5714,0.5603,0.5652,0.5366,1.0,0.66,0.5,44,evaluated
+B2_span_alone,baseline,0.9037,0.8624,0.94,0.8667,0.8444,1.0,0.88,0.3333,62,evaluated
+B3_zeroshot_llm,baseline,0.0,0.0,0.0,0.0,0.0,0.0,0.36,0.0,0,offline_llm
+B4_multi_llm,baseline,0.0,0.0,0.0,0.0,0.0,0.0,0.36,0.0,0,offline_llm
+Phase4_multi_head,architecture,0.7748,0.7027,0.7738,0.7879,0.5366,1.0,0.7,0.5,64,evaluated
+Phase5_fusion,architecture,0.885,0.8667,0.8442,0.9455,0.7097,1.0,0.9,0.0,43,in_sample_resubstitution
+Ablation_no_4a,ablation,0.5122,0.3662,0.3066,0.0,0.5366,1.0,0.56,0.3889,24,evaluated
+Ablation_no_4b,ablation,0.596,0.6292,0.6087,0.7879,0.0,1.0,0.7,0.1667,42,evaluated
+Ablation_no_4c,ablation,0.4415,0.6789,0.74,0.7879,0.5366,0.0,0.68,0.5,62,evaluated
+Ablation_plain_union,ablation,0.7748,0.7027,0.7738,0.7879,0.5366,1.0,0.7,0.5,64,evaluated

@@ -16,6 +16,18 @@ from .annotation import (
     validate_requirement_annotations,
 )
 from .baseline import CandidateGap, detect_rule_gaps
+from .comparative import (
+    compare_prompting_strategies,
+    compare_question_formulation_strategies,
+    detect_ablation_no_4a,
+    detect_ablation_no_4b,
+    detect_ablation_no_4c,
+    detect_ablation_plain_union,
+    detect_b2_span_alone_gaps,
+    detect_b3_zeroshot_llm_gaps,
+    detect_b4_multi_llm_majority_gaps,
+    run_comparative_benchmark,
+)
 from .eval import UnverifiedEvaluationError, run_evaluation
 from .frame import RequirementFrame, extract_requirement_frame
 from .fusion import (
@@ -87,10 +99,19 @@ __all__ = [
     "UnverifiedEvaluationError",
     "__version__",
     "align_gold_spans_to_bio_tokens",
+    "compare_prompting_strategies",
+    "compare_question_formulation_strategies",
     "compute_annotation_agreement",
     "compute_cohens_kappa",
     "compute_dataset_annotation_stats",
     "deduplicate_and_rank_candidates",
+    "detect_ablation_no_4a",
+    "detect_ablation_no_4b",
+    "detect_ablation_no_4c",
+    "detect_ablation_plain_union",
+    "detect_b2_span_alone_gaps",
+    "detect_b3_zeroshot_llm_gaps",
+    "detect_b4_multi_llm_majority_gaps",
     "detect_rule_gaps",
     "enrich_candidates_with_questions",
     "evaluate_predictions",
@@ -111,6 +132,7 @@ __all__ = [
     "partition_documents",
     "refine_requirement",
     "rule_based_refinement_edit",
+    "run_comparative_benchmark",
     "run_evaluation",
     "run_phase4_heads",
     "sample_requirements",

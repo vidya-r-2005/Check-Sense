@@ -1,0 +1,9 @@
+{
+  "template_strategy": {
+    "count": 65,
+    "compliant_rate": 1.0,
+    "mean_words": 11.28,
+    "lexical_diversity": 0.1528
+  },
+  "llm_strategy": "LLM Offline / Unavailable"
+}

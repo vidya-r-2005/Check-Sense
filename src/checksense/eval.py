@@ -231,6 +231,55 @@ def generate_phase5_predictions(
     return req_preds
 
 
+def generate_comparative_pipeline_predictions(
+    req_gold: dict[str, list[dict[str, Any]]],
+    pipeline_name: str,
+    smell_model_path: Path | None = None,
+    span_model_path: Path | None = None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Generate comparative baseline or ablation predictions for gold requirements."""
+    from .comparative import (
+        detect_ablation_no_4a,
+        detect_ablation_no_4b,
+        detect_ablation_no_4c,
+        detect_ablation_plain_union,
+        detect_b2_span_alone_gaps,
+        detect_b3_zeroshot_llm_gaps,
+        detect_b4_multi_llm_majority_gaps,
+    )
+    from .heads import Phase4Pipeline
+
+    p = pipeline_name.lower()
+    p4_pipeline = Phase4Pipeline(smell_model_path=smell_model_path, span_model_path=span_model_path)
+    req_preds: dict[str, list[dict[str, Any]]] = {}
+
+    for req_id, gold_rows in req_gold.items():
+        text = str(gold_rows[0].get("text", ""))
+        if not text:
+            continue
+
+        if p in ("b2", "b2_span_alone"):
+            gaps = detect_b2_span_alone_gaps(text, span_tagger=p4_pipeline.span_tagger, span_model_path=span_model_path)
+        elif p in ("b3", "b3_zeroshot_llm"):
+            gaps = detect_b3_zeroshot_llm_gaps(text)
+        elif p in ("b4", "b4_multi_llm"):
+            gaps = detect_b4_multi_llm_majority_gaps(text)
+        elif p == "ablation_no_4a":
+            gaps = detect_ablation_no_4a(text, p4_pipeline)
+        elif p == "ablation_no_4b":
+            gaps = detect_ablation_no_4b(text, p4_pipeline)
+        elif p == "ablation_no_4c":
+            gaps = detect_ablation_no_4c(text, p4_pipeline)
+        elif p == "ablation_plain_union":
+            gaps = detect_ablation_plain_union(text, p4_pipeline)
+        else:
+            gaps = []
+
+        req_preds[req_id] = [g.to_dict() for g in gaps]
+
+    return req_preds
+
+
 def run_evaluation(
     gold_file: Path,
     predictions_file: Path | None = None,
@@ -252,8 +301,7 @@ def run_evaluation(
         output_dir: Optional directory to store logged results.
         req_level: Whether to evaluate matching at requirement level.
         model_name: Identifier for model/baseline being evaluated.
-        pipeline: 'b1' for rule baseline, 'phase4' for multi-head Phase 4 pipeline,
-            or 'phase5' for fused, deduplicated, and ranked candidates.
+        pipeline: 'b1', 'b2', 'b3', 'b4', 'phase4', 'phase5', or ablation identifiers.
         smell_model_path: Optional path to trained smell classifier artifact.
         span_model_path: Optional path to trained span tagger artifact.
         fusion_model_path: Optional path to trained fusion scorer artifact.
@@ -277,6 +325,26 @@ def run_evaluation(
         req_preds = load_predictions(predictions_file)
         prediction_source = "supplied_file"
         actual_model_name = model_name
+    elif pipeline.lower() in (
+        "b2",
+        "b2_span_alone",
+        "b3",
+        "b3_zeroshot_llm",
+        "b4",
+        "b4_multi_llm",
+        "ablation_no_4a",
+        "ablation_no_4b",
+        "ablation_no_4c",
+        "ablation_plain_union",
+    ):
+        req_preds = generate_comparative_pipeline_predictions(
+            req_gold,
+            pipeline_name=pipeline,
+            smell_model_path=smell_model_path,
+            span_model_path=span_model_path,
+        )
+        prediction_source = f"{pipeline.lower()}_generated"
+        actual_model_name = pipeline
     elif pipeline.lower() == "phase5":
         req_preds = generate_phase5_predictions(
             req_gold,

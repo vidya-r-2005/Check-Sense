@@ -286,9 +286,20 @@ def create_parser() -> argparse.ArgumentParser:
     )
     p_eval.add_argument(
         "--pipeline",
-        choices=["b1", "phase4", "phase5"],
+        choices=[
+            "b1",
+            "b2",
+            "b3",
+            "b4",
+            "phase4",
+            "phase5",
+            "ablation_no_4a",
+            "ablation_no_4b",
+            "ablation_no_4c",
+            "ablation_plain_union",
+        ],
         default="b1",
-        help="Gap detection pipeline ('b1' for rule baseline, 'phase4' for multi-head Phase 4 models, 'phase5' for fusion).",
+        help="Gap detection pipeline (baselines: 'b1', 'b2', 'b3', 'b4'; architectures: 'phase4', 'phase5'; ablations: 'ablation_no_4a', 'ablation_no_4b', 'ablation_no_4c', 'ablation_plain_union').",
     )
     p_eval.add_argument(
         "--smell-model",
@@ -382,6 +393,18 @@ def create_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("reports"),
         help="Directory to save compiled report and tables.",
+    )
+    p_report.add_argument(
+        "--gold-file",
+        type=Path,
+        default=Path("data/gold/annotations/rater_1.csv"),
+        help="Path to verified gold annotations.",
+    )
+    p_report.add_argument(
+        "--summary-file",
+        type=Path,
+        default=Path("results/summary.csv"),
+        help="Destination path for the comparative summary CSV.",
     )
     p_report.set_defaults(func=_cmd_report)
 
@@ -714,10 +737,22 @@ def _cmd_rate_score(args: argparse.Namespace) -> int:
 
 
 def _cmd_report(args: argparse.Namespace) -> int:
-    print("[CheckSense CLI] 'report' subcommand invoked.")
-    print(f"Results dir: {args.results_dir.resolve()} -> Output dir: {args.output_dir.resolve()}")
-    print("Status: Implementation is scheduled in Phase 8.")
-    return 0
+    from .comparative import run_comparative_benchmark
+
+    print("[CheckSense CLI] 'report' subcommand invoked (Phase 7 Comparative Benchmarks & Ablations).")
+    print(f"Gold annotations: {args.gold_file.resolve()}")
+    print(f"Summary destination: {args.summary_file.resolve()}")
+
+    try:
+        run_comparative_benchmark(
+            gold_file=args.gold_file,
+            output_summary_file=args.summary_file,
+        )
+        print(f"\n[+] Comparative summary benchmark successfully generated at: {args.summary_file.resolve()}")
+        return 0
+    except Exception as e:
+        print(f"\n[-] ERROR generating comparative report: {e}")
+        return 1
 
 
 def _cmd_serve(args: argparse.Namespace) -> int:
