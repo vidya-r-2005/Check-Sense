@@ -59,6 +59,7 @@ data/gold/*.csv
 # Models & weights (MASTER_SPEC.md: never commit model weights)
 models/*
 !models/.gitkeep
+*.joblib
 
 # IDE & OS
 .DS_Store

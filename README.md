@@ -32,9 +32,9 @@ In accordance with Section 0.6 of `MASTER_SPEC.md`, module statuses are honestly
 | Baseline Rule Detector (B1) | Phase 2 | **working** | Lexicon & frame-slot heuristics across ambiguity, incompleteness, implicit |
 | Evaluation Module (Label-Status Gated) | Phase 2 | **working** | Strict gate refusing unverified labels; macro-F1, token Jaccard, ECE, PR-AUC |
 | Annotation Tooling (`app/annotate.py`) | Phase 3 | **working** | Streamlit app for human verification; seed 42 sampling (610 reqs / 26 docs); Cohen's kappa |
-| Smell Classifier (ARTA) | Phase 4 | `todo` | TF-IDF & SpanBERT sentence smell classifiers |
-| Span Tagger (SpanBERT) | Phase 4 | `todo` | BIO token span tagger trained on verified gold spans |
-| Completeness & Implicit Heads | Phase 4 | `todo` | Frame-slot rules, ontology, and ConceptNet |
+| Smell Classifier (ARTA) | Phase 4 | **working** | TF-IDF & Logistic Regression sentence smell classifier (ARTA Grouped-CV & QuRE benchmark) |
+| Span Tagger (BIO Tokens) | Phase 4 | **working** | Token-level BIO span classifier trained on verified gold pilot spans |
+| Completeness & Implicit Heads | Phase 4 | **working** | Frame-slot heuristics (Head 4b) and domain checklist ontology (Head 4c) |
 | Candidate-Level Fusion & Scorer | Phase 5 | `todo` | Candidate-level MLP and heuristic fallback |
 | Question & Explanation Generation | Phase 6 | `todo` | Grounded local LLM + deterministic template fallback |
 | Requirement Refinement Engine | Phase 6 | `todo` | Stakeholder answer integration |

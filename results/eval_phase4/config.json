@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-10-28T13:56:21.899238+00:00",
+  "git_commit": "b52ea7694c6a2706afff8a03d7a289a7f89e7dfc",
+  "gold_file": "C:\\Users\\2005v\\OneDrive\\Desktop\\CheckSense\\data\\gold\\annotations\\rater_1.csv",
+  "predictions_file": null,
+  "prediction_source": "phase4_heads_generated",
+  "model_name": "Phase4_multi_head",
+  "req_level": false
+}

@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-10-28T14:02:39.271407+00:00",
+  "git_commit": "b52ea7694c6a2706afff8a03d7a289a7f89e7dfc",
+  "python_version": "3.12.4",
+  "model_type": "tfidf_lr",
+  "seed": 42,
+  "n_splits": 5,
+  "device": "auto",
+  "arta_samples": 4752,
+  "arta_groups": 24,
+  "arta_class_distribution": {
+    "0": 2642,
+    "1": 2110
+  },
+  "qure_samples": 2187,
+  "pilot_samples": 50
+}

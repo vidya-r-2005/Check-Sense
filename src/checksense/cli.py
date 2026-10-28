@@ -190,12 +190,25 @@ def create_parser() -> argparse.ArgumentParser:
         help="Destination directory for model checkpoints and evaluation logs.",
     )
     p_smell.add_argument(
+        "--qure-file",
+        type=Path,
+        default=Path("data/raw/qure/QuRE.csv"),
+        help="Path to external QuRE evaluation dataset.",
+    )
+    p_smell.add_argument(
+        "--gold-file",
+        type=Path,
+        default=Path("data/gold/annotations/rater_1.csv"),
+        help="Path to verified provisional gold annotations.",
+    )
+    p_smell.add_argument(
         "--model-type",
         choices=["tfidf_lr", "spanbert_lr", "all"],
         default="tfidf_lr",
         help="Classifier architecture.",
     )
     p_smell.add_argument("--seed", type=int, default=42, help="Random seed.")
+    p_smell.add_argument("--n-splits", type=int, default=5, help="Number of grouped CV splits.")
     p_smell.add_argument("--device", type=str, default="auto", help="Compute device ('auto', 'cpu', 'cuda').")
     p_smell.set_defaults(func=_cmd_train_smell)
 
@@ -207,7 +220,7 @@ def create_parser() -> argparse.ArgumentParser:
     p_span.add_argument(
         "--gold-file",
         type=Path,
-        default=Path("data/gold/annotations.csv"),
+        default=Path("data/gold/annotations/rater_1.csv"),
         help="Path to verified gold annotations.",
     )
     p_span.add_argument(
@@ -217,6 +230,7 @@ def create_parser() -> argparse.ArgumentParser:
         help="Destination directory for model and metrics.",
     )
     p_span.add_argument("--seed", type=int, default=42, help="Random seed.")
+    p_span.add_argument("--n-splits", type=int, default=5, help="Number of grouped CV splits.")
     p_span.add_argument("--device", type=str, default="auto", help="Compute device.")
     p_span.set_defaults(func=_cmd_train_span)
 
@@ -248,14 +262,32 @@ def create_parser() -> argparse.ArgumentParser:
     p_eval.add_argument(
         "--gold-file",
         type=Path,
-        default=Path("data/gold/annotations.csv"),
+        default=Path("data/gold/annotations/rater_1.csv"),
         help="Gold annotation file with label_status.",
     )
     p_eval.add_argument(
         "--predictions-file",
         type=Path,
         default=None,
-        help="Optional path to pre-generated predictions file (default: runs B1 baseline).",
+        help="Optional path to pre-generated predictions file.",
+    )
+    p_eval.add_argument(
+        "--pipeline",
+        choices=["b1", "phase4"],
+        default="b1",
+        help="Gap detection pipeline ('b1' for rule baseline, 'phase4' for multi-head Phase 4 models).",
+    )
+    p_eval.add_argument(
+        "--smell-model",
+        type=Path,
+        default=Path("results/smell_classifier/smell_classifier.joblib"),
+        help="Path to trained smell classifier artifact.",
+    )
+    p_eval.add_argument(
+        "--span-model",
+        type=Path,
+        default=Path("results/span_tagger/span_tagger.joblib"),
+        help="Path to trained span tagger artifact.",
     )
     p_eval.add_argument(
         "--output-dir",
@@ -517,17 +549,50 @@ def _cmd_annotate_stats(args: argparse.Namespace) -> int:
 
 
 def _cmd_train_smell(args: argparse.Namespace) -> int:
+    from .smell import train_and_cross_validate_smell_classifier
+
     print(f"[CheckSense CLI] 'train-smell' subcommand invoked (model={args.model_type}, device={args.device}).")
+    print(f"Data directory:   {args.data_dir.resolve()}")
     print(f"Output directory: {args.output_dir.resolve()}")
-    print("Status: Implementation is scheduled in Phase 4.")
-    return 0
+
+    try:
+        train_and_cross_validate_smell_classifier(
+            data_dir=args.data_dir,
+            output_dir=args.output_dir,
+            model_type=args.model_type,
+            seed=args.seed,
+            n_splits=args.n_splits,
+            qure_file=args.qure_file,
+            gold_file=args.gold_file,
+            device=args.device,
+        )
+        print("\n[+] Smell classifier training, cross-validation, and evaluation successfully completed!")
+        return 0
+    except Exception as e:
+        print(f"[-] ERROR training smell classifier: {e}")
+        return 1
 
 
 def _cmd_train_span(args: argparse.Namespace) -> int:
+    from .span_tagger import train_and_evaluate_span_tagger
+
     print(f"[CheckSense CLI] 'train-span' subcommand invoked (seed={args.seed}, device={args.device}).")
+    print(f"Gold file:        {args.gold_file.resolve()}")
     print(f"Output directory: {args.output_dir.resolve()}")
-    print("Status: Implementation is scheduled in Phase 4.")
-    return 0
+
+    try:
+        train_and_evaluate_span_tagger(
+            gold_file=args.gold_file,
+            output_dir=args.output_dir,
+            seed=args.seed,
+            n_splits=args.n_splits,
+            device=args.device,
+        )
+        print("\n[+] Span tagger training, cross-validation, and evaluation successfully completed!")
+        return 0
+    except Exception as e:
+        print(f"[-] ERROR training span tagger: {e}")
+        return 1
 
 
 def _cmd_train_fusion(args: argparse.Namespace) -> int:
@@ -540,10 +605,12 @@ def _cmd_train_fusion(args: argparse.Namespace) -> int:
 def _cmd_eval(args: argparse.Namespace) -> int:
     from .eval import UnverifiedEvaluationError, run_evaluation
 
-    print(f"[CheckSense CLI] 'eval' subcommand invoked (req_level={args.req_level}).")
+    print(f"[CheckSense CLI] 'eval' subcommand invoked (req_level={args.req_level}, pipeline={args.pipeline}).")
     print(f"Gold annotations: {args.gold_file.resolve()}")
     if args.predictions_file:
         print(f"Predictions file: {args.predictions_file.resolve()}")
+    elif args.pipeline == "phase4":
+        print("Predictions: Running Phase 4 multi-head models (Heads 4a, 4b, 4c)")
     else:
         print("Predictions: Running Baseline B1 (rules only)")
 
@@ -553,6 +620,9 @@ def _cmd_eval(args: argparse.Namespace) -> int:
             predictions_file=args.predictions_file,
             output_dir=args.output_dir,
             req_level=args.req_level,
+            pipeline=args.pipeline,
+            smell_model_path=args.smell_model,
+            span_model_path=args.span_model,
         )
 
         print("\n" + "=" * 60)

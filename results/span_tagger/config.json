@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-10-28T14:02:53.861270+00:00",
+  "git_commit": "b52ea7694c6a2706afff8a03d7a289a7f89e7dfc",
+  "python_version": "3.12.4",
+  "seed": 42,
+  "n_splits": 5,
+  "device": "auto",
+  "gold_file": "data\\gold\\annotations\\rater_1.csv",
+  "n_requirements": 50,
+  "total_tokens": 1196,
+  "tag_distribution": {
+    "O": 1110,
+    "B-ambiguity": 28,
+    "B-incompleteness": 19,
+    "I-ambiguity": 23,
+    "I-incompleteness": 14,
+    "B-implicit": 2
+  },
+  "provisional_reference": "Rater 1 (Provisional Reference per Stakeholder Directive)"
+}

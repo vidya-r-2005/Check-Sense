@@ -1,8 +1,9 @@
-# CheckSense: ARTA Label Mapping Proposal (Awaiting Human Approval)
+# CheckSense: ARTA Label Mapping Specification
 
-**Date:** 2026-10-21  
-**Status:** PROPOSED (Pending Human Review and Approval)  
-**Dataset Reference:** ARTA (Zenodo record 4266727, v1.0.0, Zakeri-Nasrabadi 2020)
+**Date:** 2026-10-28  
+**Status:** PROVISIONALLY ADOPTED FOR PHASE 4 (Per Stakeholder Directive)  
+**Dataset Reference:** ARTA (Zenodo record 4266727, v1.0.0, Zakeri-Nasrabadi 2020)  
+**Provisional Reference:** Rater 1 Annotations (`data/gold/annotations/rater_1.csv`)
 
 ---
 
@@ -21,7 +22,7 @@ Inspection of `data/raw/arta/extracted/ARTADataset_release1/Datasets/` reveals 4
 ### Value Representation in Cells
 - When a smell is **present**, the cell contains the span or triggering word(s) (e.g., `'safely'`, `'appropriate*other*commercial'`).
 - When a smell is **absent**, the cell contains `'-'` or empty/whitespace.
-- Therefore, a binary smell indicator can be derived deterministically: `cell.strip() not in ('-', '', 'nan', 'none')`.
+- Therefore, a binary smell indicator is derived deterministically: `cell.strip().lower() not in ('-', '', 'nan', 'none', '0', 'null', 'false')`.
 
 ---
 
@@ -41,9 +42,9 @@ Inspection of `data/raw/arta/extracted/ARTADataset_release1/Datasets/` reveals 4
 
 ---
 
-## 3. Proposed Mapping
+## 3. Adopted Mapping
 
-We propose mapping ARTA's 9 smell types to CheckSense classes and subtypes as follows:
+The 9 ARTA smell types map to CheckSense classes and subtypes as follows:
 
 | ARTA Smell Type | Normalized Column Variations | Target CheckSense Class | Target CheckSense Subtype | Rationale |
 |---|---|---|---|---|
@@ -56,13 +57,14 @@ We propose mapping ARTA's 9 smell types to CheckSense classes and subtypes as fo
 | **Comparatives** | `Comparative`, `comparatives`, `Compratives` | `ambiguity` | `vague_quantifier` | Relative comparisons (*faster*, *better*) without explicit baseline. |
 | **Vague Pronouns** | `Vague_pron.`, `vague_pronouns`, `vague_pronuns` | `ambiguity` | `anaphora` | Pronouns (*it*, *which*, *they*) creating anaphoric ambiguity. |
 | **Loopholes** | `Loophole`, `loopholes`, `looples` | `incompleteness` | `missing_condition` | Clauses allowing omission of duty (*where feasible*, *as appropriate*, *if applicable*). |
-| **Negative Statements** | `Negative`, `negative_statements`, `negative_sentence` | `ambiguity` / auxiliary feature | *(Auxiliary)* | Negative statements (*shall not*) are not automatically defective, but frequently create loophole / scoping ambiguities. Proposed as a sentence-level feature for the smell classifier rather than an independent gold gap. |
+| **Negative Statements** | `Negative`, `negative_statements`, `negative_sentence` | `ambiguity` / auxiliary feature | `auxiliary_negative` | Negative statements (*shall not*) are not automatically defective, but frequently create loophole / scoping ambiguities. Adopted as an auxiliary sentence-level feature for the smell classifier. |
 
 ---
 
-## 4. Next Step: Human Review Gate
+## 4. Governance & Provisional Adoption Notice
 
-Per Section 3 of `MASTER_SPEC.md` and Rule 5 of `AGENTS.md`:
-> Inspect the real columns, then propose a label mapping in docs/label_mapping.md for human approval.
-
-This proposal is now documented and preserved for stakeholder review. Training of the smell classifier in Phase 4 will use this mapping only upon user confirmation.
+Per Stakeholder Directive (2026-10-28):
+- To proceed to Phase 4 without delaying for manual pilot re-annotation, this mapping is **provisionally adopted** for training and evaluating `TfidfSmellClassifier` and associated heads.
+- Both original annotator files (`rater_1.csv` and `rater_2.csv`) are strictly preserved unchanged.
+- `rater_1.csv` is designated as the provisional classification reference for training and evaluation benchmarks.
+- Model performance against these provisional labels measures agreement with Rater 1's labeling conventions, not reconciled ground-truth defect detection.

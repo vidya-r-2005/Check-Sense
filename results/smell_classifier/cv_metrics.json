@@ -1,0 +1,140 @@
+{
+  "overall": {
+    "n_samples": 4752,
+    "accuracy": 0.4912,
+    "precision": 0.4403,
+    "recall": 0.5384,
+    "f1": 0.4844,
+    "f2": 0.5154,
+    "roc_auc": 0.4677,
+    "pr_auc": 0.4147,
+    "brier_score": 0.301,
+    "confusion_matrix": [
+      [
+        1198,
+        1444
+      ],
+      [
+        974,
+        1136
+      ]
+    ]
+  },
+  "folds": [
+    {
+      "fold": 1,
+      "n_val": 944,
+      "n_samples": 944,
+      "accuracy": 0.3517,
+      "precision": 0.2949,
+      "recall": 0.6688,
+      "f1": 0.4093,
+      "f2": 0.5335,
+      "roc_auc": 0.4023,
+      "pr_auc": 0.2857,
+      "brier_score": 0.3794,
+      "confusion_matrix": [
+        [
+          120,
+          507
+        ],
+        [
+          105,
+          212
+        ]
+      ]
+    },
+    {
+      "fold": 2,
+      "n_val": 960,
+      "n_samples": 960,
+      "accuracy": 0.4531,
+      "precision": 0.8297,
+      "recall": 0.3239,
+      "f1": 0.4659,
+      "f2": 0.3689,
+      "roc_auc": 0.5572,
+      "pr_auc": 0.8057,
+      "brier_score": 0.3177,
+      "confusion_matrix": [
+        [
+          206,
+          47
+        ],
+        [
+          478,
+          229
+        ]
+      ]
+    },
+    {
+      "fold": 3,
+      "n_val": 950,
+      "n_samples": 950,
+      "accuracy": 0.5063,
+      "precision": 0.1935,
+      "recall": 0.6779,
+      "f1": 0.301,
+      "f2": 0.4517,
+      "roc_auc": 0.6113,
+      "pr_auc": 0.2151,
+      "brier_score": 0.283,
+      "confusion_matrix": [
+        [
+          380,
+          421
+        ],
+        [
+          48,
+          101
+        ]
+      ]
+    },
+    {
+      "fold": 4,
+      "n_val": 954,
+      "n_samples": 954,
+      "accuracy": 0.6184,
+      "precision": 0.6444,
+      "recall": 0.5426,
+      "f1": 0.5892,
+      "f2": 0.5603,
+      "roc_auc": 0.63,
+      "pr_auc": 0.664,
+      "brier_score": 0.2434,
+      "confusion_matrix": [
+        [
+          329,
+          144
+        ],
+        [
+          220,
+          261
+        ]
+      ]
+    },
+    {
+      "fold": 5,
+      "n_val": 944,
+      "n_samples": 944,
+      "accuracy": 0.5254,
+      "precision": 0.5061,
+      "recall": 0.7303,
+      "f1": 0.5978,
+      "f2": 0.6708,
+      "roc_auc": 0.5157,
+      "pr_auc": 0.4726,
+      "brier_score": 0.2822,
+      "confusion_matrix": [
+        [
+          163,
+          325
+        ],
+        [
+          123,
+          333
+        ]
+      ]
+    }
+  ]
+}
