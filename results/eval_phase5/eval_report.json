@@ -1,0 +1,52 @@
+{
+  "n_requirements": 50,
+  "n_clean_requirements": 18,
+  "n_gold_gaps": 47,
+  "n_pred_gaps": 41,
+  "req_level": false,
+  "macro_f1": 0.8969364982755123,
+  "micro_f1": 0.8863636363636364,
+  "micro_f2": 0.8515283842794761,
+  "per_class": {
+    "ambiguity": {
+      "class_name": "ambiguity",
+      "tp": 26,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.9629629629629629,
+      "recall": 1.0,
+      "f1": 0.9811320754716981,
+      "f2": 0.9923664122137406
+    },
+    "incompleteness": {
+      "class_name": "incompleteness",
+      "tp": 11,
+      "fp": 1,
+      "fn": 8,
+      "precision": 0.9166666666666666,
+      "recall": 0.5789473684210527,
+      "f1": 0.7096774193548387,
+      "f2": 0.625
+    },
+    "implicit": {
+      "class_name": "implicit",
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "f2": 1.0
+    }
+  },
+  "has_gap_accuracy": 0.94,
+  "has_gap_precision": 1.0,
+  "has_gap_recall": 0.90625,
+  "has_gap_f1": 0.9508196721311475,
+  "has_gap_pr_auc": 0.9815625,
+  "false_alarm_rate_clean": 0.05555555555555555,
+  "spearman_rho": 1.0,
+  "ndcg_at_3": 1.0,
+  "ece": 0.056160975609756275,
+  "brier_score": 0.013256768780487807
+}

@@ -242,7 +242,7 @@ def create_parser() -> argparse.ArgumentParser:
     p_fusion.add_argument(
         "--gold-file",
         type=Path,
-        default=Path("data/gold/annotations.csv"),
+        default=Path("data/gold/annotations/rater_1.csv"),
         help="Path to verified gold annotations.",
     )
     p_fusion.add_argument(
@@ -251,7 +251,20 @@ def create_parser() -> argparse.ArgumentParser:
         default=Path("results/fusion_model"),
         help="Destination directory for model and calibration data.",
     )
+    p_fusion.add_argument(
+        "--smell-model",
+        type=Path,
+        default=Path("results/smell_classifier/smell_classifier.joblib"),
+        help="Path to trained smell classifier artifact.",
+    )
+    p_fusion.add_argument(
+        "--span-model",
+        type=Path,
+        default=Path("results/span_tagger/span_tagger.joblib"),
+        help="Path to trained span tagger artifact.",
+    )
     p_fusion.add_argument("--seed", type=int, default=42, help="Random seed.")
+    p_fusion.add_argument("--n-splits", type=int, default=5, help="Number of grouped CV splits.")
     p_fusion.set_defaults(func=_cmd_train_fusion)
 
     # 8. eval
@@ -273,9 +286,9 @@ def create_parser() -> argparse.ArgumentParser:
     )
     p_eval.add_argument(
         "--pipeline",
-        choices=["b1", "phase4"],
+        choices=["b1", "phase4", "phase5"],
         default="b1",
-        help="Gap detection pipeline ('b1' for rule baseline, 'phase4' for multi-head Phase 4 models).",
+        help="Gap detection pipeline ('b1' for rule baseline, 'phase4' for multi-head Phase 4 models, 'phase5' for fusion).",
     )
     p_eval.add_argument(
         "--smell-model",
@@ -288,6 +301,12 @@ def create_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("results/span_tagger/span_tagger.joblib"),
         help="Path to trained span tagger artifact.",
+    )
+    p_eval.add_argument(
+        "--fusion-model",
+        type=Path,
+        default=Path("results/fusion_model/fusion_model.joblib"),
+        help="Path to trained fusion scorer artifact.",
     )
     p_eval.add_argument(
         "--output-dir",
@@ -596,10 +615,26 @@ def _cmd_train_span(args: argparse.Namespace) -> int:
 
 
 def _cmd_train_fusion(args: argparse.Namespace) -> int:
-    print(f"[CheckSense CLI] 'train-fusion' subcommand invoked (seed={args.seed}).")
+    from .fusion import train_and_cross_validate_fusion_scorer
+
+    print(f"[CheckSense CLI] 'train-fusion' subcommand invoked (seed={args.seed}, n_splits={args.n_splits}).")
+    print(f"Gold annotations: {args.gold_file.resolve()}")
     print(f"Output directory: {args.output_dir.resolve()}")
-    print("Status: Implementation is scheduled in Phase 5.")
-    return 0
+
+    try:
+        train_and_cross_validate_fusion_scorer(
+            gold_file=args.gold_file,
+            output_dir=args.output_dir,
+            smell_model_path=args.smell_model if args.smell_model.exists() else None,
+            span_model_path=args.span_model if args.span_model.exists() else None,
+            seed=args.seed,
+            n_splits=args.n_splits,
+        )
+        print("\n[+] Candidate-level fusion scorer training and cross-validation completed!")
+        return 0
+    except Exception as e:
+        print(f"[-] ERROR training fusion scorer: {e}")
+        return 1
 
 
 def _cmd_eval(args: argparse.Namespace) -> int:
@@ -609,6 +644,8 @@ def _cmd_eval(args: argparse.Namespace) -> int:
     print(f"Gold annotations: {args.gold_file.resolve()}")
     if args.predictions_file:
         print(f"Predictions file: {args.predictions_file.resolve()}")
+    elif args.pipeline == "phase5":
+        print("Predictions: Running Phase 5 Candidate-Level Fusion Scorer")
     elif args.pipeline == "phase4":
         print("Predictions: Running Phase 4 multi-head models (Heads 4a, 4b, 4c)")
     else:
@@ -623,6 +660,7 @@ def _cmd_eval(args: argparse.Namespace) -> int:
             pipeline=args.pipeline,
             smell_model_path=args.smell_model,
             span_model_path=args.span_model,
+            fusion_model_path=args.fusion_model,
         )
 
         print("\n" + "=" * 60)

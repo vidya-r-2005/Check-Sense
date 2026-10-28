@@ -179,6 +179,58 @@ def generate_phase4_predictions(
     return req_preds
 
 
+def generate_phase5_predictions(
+    req_gold: dict[str, list[dict[str, Any]]],
+    smell_model_path: Path | None = None,
+    span_model_path: Path | None = None,
+    fusion_model_path: Path | None = None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Generate Phase 5 fused, deduplicated, and ranked predictions for gold requirements."""
+    from .frame import extract_requirement_frame
+    from .fusion import HeuristicFusionScorer, MLPFusionScorer, deduplicate_and_rank_candidates
+    from .heads import Phase4Pipeline
+
+    pipeline = Phase4Pipeline(smell_model_path=smell_model_path, span_model_path=span_model_path)
+
+    if fusion_model_path and Path(fusion_model_path).exists():
+        scorer = MLPFusionScorer.load(Path(fusion_model_path))
+    else:
+        scorer = HeuristicFusionScorer()
+
+    req_preds: dict[str, list[dict[str, Any]]] = {}
+
+    for req_id, gold_rows in req_gold.items():
+        text = str(gold_rows[0].get("text", ""))
+        if not text:
+            continue
+
+        frame = extract_requirement_frame(text)
+
+        # Smell probability from Head 4a
+        smell_prob = 0.5
+        if pipeline.smell_model:
+            try:
+                smell_prob = float(pipeline.smell_model.predict_smell_probability([text])[0])
+            except Exception:
+                smell_prob = 0.5
+
+        # Detect raw candidates from Phase 4 heads
+        raw_candidates = pipeline.detect_all_gaps(text, frame=frame)
+
+        # Fuse, calibrate, deduplicate, and rank
+        fused_candidates = deduplicate_and_rank_candidates(
+            candidates=raw_candidates,
+            scorer=scorer,
+            req_text=text,
+            frame=frame,
+            smell_prob=smell_prob,
+        )
+
+        req_preds[req_id] = [g.to_dict() for g in fused_candidates]
+
+    return req_preds
+
+
 def run_evaluation(
     gold_file: Path,
     predictions_file: Path | None = None,
@@ -188,6 +240,7 @@ def run_evaluation(
     pipeline: str = "b1",
     smell_model_path: Path | None = None,
     span_model_path: Path | None = None,
+    fusion_model_path: Path | None = None,
 ) -> EvaluationReport:
     """Execute evaluation on verified gold annotations.
 
@@ -199,9 +252,11 @@ def run_evaluation(
         output_dir: Optional directory to store logged results.
         req_level: Whether to evaluate matching at requirement level.
         model_name: Identifier for model/baseline being evaluated.
-        pipeline: 'b1' for rule baseline or 'phase4' for multi-head Phase 4 pipeline.
+        pipeline: 'b1' for rule baseline, 'phase4' for multi-head Phase 4 pipeline,
+            or 'phase5' for fused, deduplicated, and ranked candidates.
         smell_model_path: Optional path to trained smell classifier artifact.
         span_model_path: Optional path to trained span tagger artifact.
+        fusion_model_path: Optional path to trained fusion scorer artifact.
 
     Returns:
         EvaluationReport dataclass.
@@ -222,6 +277,15 @@ def run_evaluation(
         req_preds = load_predictions(predictions_file)
         prediction_source = "supplied_file"
         actual_model_name = model_name
+    elif pipeline.lower() == "phase5":
+        req_preds = generate_phase5_predictions(
+            req_gold,
+            smell_model_path=smell_model_path,
+            span_model_path=span_model_path,
+            fusion_model_path=fusion_model_path,
+        )
+        prediction_source = "phase5_fusion_generated"
+        actual_model_name = "Phase5_candidate_fusion"
     elif pipeline.lower() == "phase4":
         req_preds = generate_phase4_predictions(
             req_gold,

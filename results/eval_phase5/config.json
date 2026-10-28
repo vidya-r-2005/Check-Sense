@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-10-28T14:55:07.038989+00:00",
+  "git_commit": "be5256aa716826f4a46a74f6d0b457459880a92b",
+  "gold_file": "C:\\Users\\2005v\\OneDrive\\Desktop\\CheckSense\\data\\gold\\annotations\\rater_1.csv",
+  "predictions_file": null,
+  "prediction_source": "phase5_fusion_generated",
+  "model_name": "Phase5_candidate_fusion",
+  "req_level": false
+}

@@ -18,6 +18,13 @@ from .annotation import (
 from .baseline import CandidateGap, detect_rule_gaps
 from .eval import UnverifiedEvaluationError, run_evaluation
 from .frame import RequirementFrame, extract_requirement_frame
+from .fusion import (
+    HeuristicFusionScorer,
+    MLPFusionScorer,
+    deduplicate_and_rank_candidates,
+    extract_candidate_features,
+    train_and_cross_validate_fusion_scorer,
+)
 from .heads import Phase4Pipeline, run_phase4_heads
 from .metrics import EvaluationReport, evaluate_predictions
 from .sample import (
@@ -45,7 +52,9 @@ __all__ = [
     "ANNOTATION_COLUMNS",
     "CandidateGap",
     "EvaluationReport",
+    "HeuristicFusionScorer",
     "LinearSpanTagger",
+    "MLPFusionScorer",
     "Phase4Pipeline",
     "RequirementFrame",
     "TAXONOMY",
@@ -56,8 +65,10 @@ __all__ = [
     "compute_annotation_agreement",
     "compute_cohens_kappa",
     "compute_dataset_annotation_stats",
+    "deduplicate_and_rank_candidates",
     "detect_rule_gaps",
     "evaluate_predictions",
+    "extract_candidate_features",
     "extract_requirement_frame",
     "interpret_kappa",
     "load_annotation_sheet",
@@ -72,6 +83,7 @@ __all__ = [
     "run_phase4_heads",
     "sample_requirements",
     "save_annotation_rows",
+    "train_and_cross_validate_fusion_scorer",
     "train_and_cross_validate_smell_classifier",
     "train_and_evaluate_span_tagger",
     "validate_clarification_question",

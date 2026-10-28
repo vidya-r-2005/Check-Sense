@@ -35,7 +35,7 @@ In accordance with Section 0.6 of `MASTER_SPEC.md`, module statuses are honestly
 | Smell Classifier (ARTA) | Phase 4 | **working** | TF-IDF & Logistic Regression sentence smell classifier (ARTA Grouped-CV & QuRE benchmark) |
 | Span Tagger (BIO Tokens) | Phase 4 | **working** | Token-level BIO span classifier trained on verified gold pilot spans |
 | Completeness & Implicit Heads | Phase 4 | **working** | Frame-slot heuristics (Head 4b) and domain checklist ontology (Head 4c) |
-| Candidate-Level Fusion & Scorer | Phase 5 | `todo` | Candidate-level MLP and heuristic fallback |
+| Candidate-Level Fusion & Scorer | Phase 5 | **working** | Candidate-level MLP & heuristic fallback, overlap deduplication, deterministic ranking, Grouped-CV |
 | Question & Explanation Generation | Phase 6 | `todo` | Grounded local LLM + deterministic template fallback |
 | Requirement Refinement Engine | Phase 6 | `todo` | Stakeholder answer integration |
 | Comparative Baselines (B2-B4) | Phase 7 | `todo` | Span tagger alone, zero-shot LLM, multi-LLM majority |

@@ -1,0 +1,48 @@
+{
+  "overall": {
+    "n_candidates": 64,
+    "n_positive_gold_matches": 43,
+    "n_negative_candidates": 21,
+    "accuracy": 0.5625,
+    "precision": 0.7027,
+    "recall": 0.6047,
+    "f1": 0.65,
+    "roc_auc": 0.608,
+    "brier_score": 0.3617,
+    "ece": 0.383,
+    "severity_spearman_rho": 0.251,
+    "severity_mae": 0.4419
+  },
+  "folds": [
+    {
+      "fold": 1,
+      "n_val": 13,
+      "accuracy": 0.4615,
+      "f1": 0.5882
+    },
+    {
+      "fold": 2,
+      "n_val": 13,
+      "accuracy": 0.5385,
+      "f1": 0.7
+    },
+    {
+      "fold": 3,
+      "n_val": 13,
+      "accuracy": 0.6154,
+      "f1": 0.6667
+    },
+    {
+      "fold": 4,
+      "n_val": 13,
+      "accuracy": 0.5385,
+      "f1": 0.625
+    },
+    {
+      "fold": 5,
+      "n_val": 12,
+      "accuracy": 0.6667,
+      "f1": 0.6667
+    }
+  ]
+}
