@@ -43,6 +43,7 @@ In accordance with Section 0.6 of `MASTER_SPEC.md`, all module statuses are veri
 | Comparative Baselines (B2-B4) & Ablations | Phase 7 | **working** | B1-B4, head ablations, plain union, template/LLM & prompt comparisons; one command reproduces results/summary.csv |
 | Full Evaluation & Reporting Engine | Phase 8 | **working** | `rate-make`, `rate-score`, 1,000-sample bootstrap CIs, `error_analysis.md`, `final_report.md` (held-out pool sequestered) |
 | Streamlit Application (`app/streamlit_app.py`) | Phase 9 | **working** | End-to-end interactive SRS defect detection, clarification, and refinement workflow |
+| SRS Document Upload & Batch Analysis | Extension | **working** | PDF, Word (.docx), TXT parsing, batch defect analysis, candidate review/editing, traceability, multi-format export |
 
 ---
 
@@ -81,16 +82,81 @@ python -m checksense.cli serve --app annotate
 
 ### 4. Run Automated Tests & Linter
 ```powershell
-# Run full automated test suite (145+ tests across all phases)
+# Run full automated test suite (165 tests across all phases and document engine)
 pytest tests -v
 
 # Run Ruff linter and formatter checks
-ruff check src/ tests/
+ruff check src/ tests/ app/
 ```
 
 ---
 
-## End-to-End User Workflow
+## SRS Document Upload & Analysis Workflow
+
+CheckSense supports end-to-end analysis of complete Software Requirements Specifications (SRS):
+
+```
++-----------------------------------------------------------------------------------------+
+|                        CheckSense SRS Document Analysis Studio                          |
++-----------------------------------------------------------------------------------------+
+                                             │
+               [ Upload SRS Document: .pdf, .docx, or .txt ]
+                                             │
+                                             ▼
+          +-------------------------------------------------------------+
+          | Document Extraction & Candidate Requirement Segmentation     |
+          | - Preserves explicit IDs (REQ-001, [SR-1.2], 3.2.1)         |
+          | - Tracks sections, page numbers, and bullet structures      |
+          | - Distinguishes normative requirements from intro narrative  |
+          +-------------------------------------------------------------+
+                                             │
+                                             ▼
+          +-------------------------------------------------------------+
+          | Pre-Analysis Candidate Review & Editing Interface            |
+          | - Review candidate list and flags for non-normative phrasing|
+          | - Edit requirement text or exclude irrelevant candidates     |
+          | - Action: "🚀 Analyze SRS Document"                         |
+          +-------------------------------------------------------------+
+                                             │
+                                             ▼
+          +-------------------------------------------------------------+
+          | Batch Multi-Head Detection & Candidate-Level Fusion         |
+          | - Head 4a: Ambiguity & Vague Terms                          |
+          | - Head 4b: Missing Actors, Conditions, & Thresholds         |
+          | - Head 4c: Implicit Security, Privacy & Audit Constraints   |
+          | - Phase 5 Fusion Scorer & Overlap Deduplication             |
+          +-------------------------------------------------------------+
+                                             │
+                                             ▼
+          +-------------------------------------------------------------+
+          | Multi-View Analysis Dashboard                               |
+          | A. Document Overview: Clean vs Defective, Macro ISO, Clarity|
+          | B. Requirement Explorer: Search, filter & highlighted spans |
+          | C. Clarification Workspace: Grounded questions & answers    |
+          | D. Summary & Traceability: Full traceability matrix & audit |
+          | E. Single-Requirement Mode: Preserved individual analysis   |
+          +-------------------------------------------------------------+
+                                             │
+                                             ▼
+          +-------------------------------------------------------------+
+          | Governed Refinement & Stakeholder Approval Gate             |
+          | - Strict numeric preservation audit (100% zero tampering)   |
+          | - Before vs After comparison with ISO 29148 quality delta   |
+          | - Explicit "Accept & Commit Revision" confirmation button    |
+          +-------------------------------------------------------------+
+                                             │
+                                             ▼
+          +-------------------------------------------------------------+
+          | Multi-Format Report Exports                                 |
+          | - 📥 Markdown Monograph Report (srs_report.md)              |
+          | - 📥 CSV Requirement Analysis Table (srs_requirements.csv)  |
+          | - 📥 Complete JSON Audit Trail (srs_audit_trail.json)       |
+          +-------------------------------------------------------------+
+```
+
+---
+
+## Single-Requirement User Workflow
 
 ```
 1. Requirement Input

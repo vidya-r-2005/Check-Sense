@@ -236,3 +236,34 @@ def test_cli_serve_dry_run():
 
     ret_annotate = main(["serve", "--app", "annotate"])
     assert ret_annotate == 0
+
+
+# ============================================================================
+# 6. Windows DLL & Startup Regression Tests
+# ============================================================================
+
+def test_startup_and_import_integrity():
+    """Verify clean import of checksense, spaCy CPU, and streamlit app without DLL errors.
+
+    Regression test for WinError 1114 (c10.dll dynamic link library initialization failure).
+    """
+    import subprocess
+
+    cmd = [
+        sys.executable,
+        "-c",
+        (
+            "import sys; "
+            "sys.path.insert(0, '.'); "
+            "import checksense; "
+            "import spacy; "
+            "nlp = spacy.load('en_core_web_sm'); "
+            "import app.streamlit_app; "
+            "print('STARTUP_OK')"
+        ),
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO_ROOT)
+    assert res.returncode == 0, f"Startup subprocess failed:\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}"
+    assert "STARTUP_OK" in res.stdout
+    assert "WinError 1114" not in res.stderr
+

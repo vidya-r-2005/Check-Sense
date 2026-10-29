@@ -1,6 +1,6 @@
 # CheckSense Error Analysis & Failure Modes Report
 
-**Date:** 2026-10-28  
+**Date:** 2026-10-29  
 **Evaluation Basis:** Development / Pilot Annotations (`rater_1.csv` Provisional Reference)  
 **Governing Protocol:** [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md) Section 7
 

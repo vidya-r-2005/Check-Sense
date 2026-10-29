@@ -33,12 +33,12 @@ REQUIRED_DIRS = [
 CORE_PACKAGES = [
     ("pytest", "Testing harness"),
     ("ruff", "Linter and formatter"),
-    ("torch", "PyTorch deep learning framework"),
     ("spacy", "spaCy NLP parser"),
-    ("transformers", "Hugging Face transformers"),
     ("sklearn", "scikit-learn machine learning"),
     ("pandas", "Data manipulation"),
     ("streamlit", "Interactive web UI"),
+    ("pypdf", "PDF document extraction"),
+    ("docx", "Word document extraction"),
 ]
 
 

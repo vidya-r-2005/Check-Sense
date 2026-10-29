@@ -1,7 +1,7 @@
 # CheckSense: Multi-Head Defect Detection, Candidate Fusion, and Grounded Clarification for Software Requirements
 
 **Technical Evaluation Report & Scientific Monograph**  
-**Date:** 2026-10-28  
+**Date:** 2026-10-29  
 **Specification Authority:** [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md)  
 **Codebase Repository:** CheckSense (Python 3.12, PyTorch, spaCy, scikit-learn)
 
