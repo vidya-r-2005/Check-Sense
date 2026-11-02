@@ -1,0 +1,38 @@
+# SOFTWARE REQUIREMENTS SPECIFICATION
+CheckSense Sample Project — Library Management System
+Document version: 1.0 | Status: Sample for testing | Date: 29 October 2026
+
+## 1. Introduction
+This sample SRS describes a small library management system used by library members and librarians. It is intentionally designed to include a mixture of clear, vague, incomplete, and security-related requirements so that the CheckSense analysis workflow can be tested. It is a synthetic test document and is not a validated benchmark.
+
+## 2. Purpose and Scope
+The system will allow members to search the catalogue, reserve books, view loans, and receive notifications. Librarians will manage catalogue records, member accounts, and loan transactions. The system shall be accessible through a web browser.
+
+## 3. Functional Requirements
+REQ-F-001: The system shall display search results within 2 seconds for 95% of searches under 300 concurrent users.
+REQ-F-002: The system shall allow members to search the catalogue by title, author, or ISBN.
+REQ-F-003: The system shall process book reservations quickly.
+REQ-F-004: The system shall notify members when necessary.
+REQ-F-005: The librarian shall update a book record after the librarian selects the record and submits valid changes.
+REQ-F-006: The system shall support a large number of concurrent users.
+REQ-F-007: The system shall allow members to cancel a reservation before the reservation is fulfilled.
+REQ-F-008: The system shall generate overdue-loan reports automatically at the end of each day.
+REQ-F-009: The system shall let members view their current loans and due dates.
+REQ-F-010: The system shall prevent two members from reserving the same available copy at the same time.
+
+## 4. Security and Privacy Requirements
+REQ-S-001: The system shall store member passwords in the database.
+REQ-S-002: Only authorized librarians shall be able to modify catalogue records.
+REQ-S-003: The system shall keep member information secure.
+REQ-S-004: The system shall record successful and failed login attempts with a timestamp and account identifier.
+
+## 5. Availability and Recovery Requirements
+REQ-N-001: The system shall be available 99.9% of each calendar month, excluding approved maintenance windows.
+REQ-N-002: The system shall recover from a service failure within an acceptable time.
+
+## 6. Business Rules and Assumptions
+Members must have an active account to reserve a book. A book copy can have only one active reservation at a time. The sample deliberately leaves some policies unspecified; CheckSense should identify possible gaps rather than invent the missing business rules.
+
+## 7. Test Notes
+Expected test targets include vague terms such as 'quickly', 'when necessary', 'large number', 'secure', and 'acceptable time'; potentially missing security-storage details; measurable performance constraints; and requirements that are comparatively specific. Detection results may vary by model and configuration.
+

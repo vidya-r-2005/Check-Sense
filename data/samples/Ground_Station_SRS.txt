@@ -1,0 +1,12 @@
+# 1.0 System Overview
+This specification defines the functional requirements for the Satellite Ground Station telemetry processor.
+
+## 2.0 Telemetry and Tracking Requirements
+REQ-001: The telemetry engine shall transmit diagnostic reports quickly upon user login.
+REQ-002: The antenna controller shall calibrate azimuth angles before tracking commences.
+REQ-003: The system shall record audit logs for all operator actions.
+REQ-004: All sensitive flight payload parameters shall be encrypted using AES-256.
+REQ-005: The telemetry stream shall parse several packets per second without loss.
+REQ-006: In the event of uplink failure, the system shall switch to secondary backup link within 500 milliseconds.
+REQ-007: The operator console shall display alert banners.
+REQ-008: The archive service shall retain historical mission data for 30 days.

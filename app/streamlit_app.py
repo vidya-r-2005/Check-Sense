@@ -165,6 +165,40 @@ def main():
     pipeline, fusion_scorer, ollama_online = load_pipeline()
     llm_client = OllamaClient(timeout=3.0) if ollama_online else None
 
+    # Automated Demo / Showcase initialization via query param
+    if st.query_params.get("demo") == "true" and not st.session_state.is_analyzed:
+        sample_txt = (
+            "# 1.0 System Overview\n"
+            "This specification defines the functional requirements for the Satellite Ground Station telemetry processor.\n\n"
+            "## 2.0 Telemetry and Tracking Requirements\n"
+            "REQ-001: The telemetry engine shall transmit diagnostic reports quickly upon user login.\n"
+            "REQ-002: The antenna controller shall calibrate azimuth angles before tracking commences.\n"
+            "REQ-003: The system shall record audit logs for all operator actions.\n"
+            "REQ-004: All sensitive flight payload parameters shall be encrypted using AES-256.\n"
+            "REQ-005: The telemetry stream shall parse several packets per second without loss.\n"
+            "REQ-006: In the event of uplink failure, the system shall switch to secondary backup link within 500 milliseconds.\n"
+            "REQ-007: The operator console shall display alert banners.\n"
+            "REQ-008: The archive service shall retain historical mission data for 30 days.\n"
+        )
+        raw_reqs, warnings = extract_srs_document(sample_txt.encode("utf-8"), filename="Ground_Station_SRS.txt")
+        results = analyze_srs_requirements(
+            requirements=raw_reqs,
+            pipeline=pipeline,
+            fusion_scorer=fusion_scorer,
+            llm_client=llm_client,
+        )
+        summary = summarize_srs_analysis(
+            results=results,
+            filename="Ground_Station_SRS.txt",
+            extraction_warnings=warnings,
+        )
+        st.session_state.uploaded_filename = "Ground_Station_SRS.txt"
+        st.session_state.extracted_requirements = raw_reqs
+        st.session_state.extraction_warnings = warnings
+        st.session_state.analysis_results = results
+        st.session_state.document_summary = summary
+        st.session_state.is_analyzed = True
+
     # Sidebar: System & Environment Status
     with st.sidebar:
         st.header("⚙️ CheckSense Engine")
@@ -233,6 +267,31 @@ def main():
             st.session_state.is_analyzed = False
             st.session_state.analysis_results = []
             st.session_state.document_summary = None
+
+        # Convenient Sample Specification Loader
+        if not st.session_state.uploaded_filename:
+            if st.button("📄 Load Example Specification (Ground_Station_SRS.txt)", key="btn_load_sample_doc"):
+                sample_txt = (
+                    "# 1.0 System Overview\n"
+                    "This specification defines the functional requirements for the Satellite Ground Station telemetry processor.\n\n"
+                    "## 2.0 Telemetry and Tracking Requirements\n"
+                    "REQ-001: The telemetry engine shall transmit diagnostic reports quickly upon user login.\n"
+                    "REQ-002: The antenna controller shall calibrate azimuth angles before tracking commences.\n"
+                    "REQ-003: The system shall record audit logs for all operator actions.\n"
+                    "REQ-004: All sensitive flight payload parameters shall be encrypted using AES-256.\n"
+                    "REQ-005: The telemetry stream shall parse several packets per second without loss.\n"
+                    "REQ-006: In the event of uplink failure, the system shall switch to secondary backup link within 500 milliseconds.\n"
+                    "REQ-007: The operator console shall display alert banners.\n"
+                    "REQ-008: The archive service shall retain historical mission data for 30 days.\n"
+                )
+                raw_reqs, warnings = extract_srs_document(sample_txt.encode("utf-8"), filename="Ground_Station_SRS.txt")
+                st.session_state.uploaded_filename = "Ground_Station_SRS.txt"
+                st.session_state.extracted_requirements = raw_reqs
+                st.session_state.extraction_warnings = warnings
+                st.session_state.is_analyzed = False
+                st.session_state.analysis_results = []
+                st.session_state.document_summary = None
+                st.rerun()
 
         # Display Extraction Warnings
         if st.session_state.extraction_warnings:
